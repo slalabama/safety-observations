@@ -102,19 +102,3 @@ class WalkaroundSubmission(Base):
     
     employee = relationship("Employee", back_populates="walkaround_submissions")
     form = relationship("WalkaroundForm", back_populates="submissions")
-    from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
-from sqlalchemy.orm import relationship
-from datetime import datetime
-import enum
-
-class ObservationMedia(Base):
-    __tablename__ = "observation_media"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    observation_id = Column(Integer, ForeignKey("observations.id"), nullable=False)
-    file_path = Column(String, nullable=False)  # Path on Railway filesystem
-    file_type = Column(String, nullable=False)  # photo or video
-    file_name = Column(String, nullable=False)  # Original filename
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
