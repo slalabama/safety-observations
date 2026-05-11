@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Observations - Login</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a2b4a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 12px;
+            padding: 48px;
+            width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .logo-icon {
+            width: 64px;
+            height: 64px;
+            background: #1a2b4a;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            font-size: 32px;
+        }
+
+        .logo h1 {
+            color: #1a2b4a;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #1a2b4a;
+        }
+
+        .gps-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .gps-status.success { border-color: #28a745; color: #28a745; background: #f0fff4; }
+        .gps-status.error { border-color: #dc3545; color: #dc3545; background: #fff0f0; }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: #1a2b4a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-login:hover { background: #243d6b; }
+        .btn-login:disabled { background: #999; cursor: not-allowed; }
+
+        .error-msg {
+            background: #fff0f0;
+            border: 1px solid #dc3545;
+            color: #dc3545;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <div class="logo-icon">🦺</div>
+            <h1>Safety Observations</h1>
+            <p>Admin Portal</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <div class="form-group">
+            <label for="badge">Badge Number</label>
+            <input type="text" id="badge" placeholder="Enter your badge number" autofocus>
+        </div>
+
+        <div class="gps-status" id="gpsStatus">
+            📍 Checking your location...
+        </div>
+
+        <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>
+            Sign In
+        </button>
+    </div>
+
+    <script>
+        let userLat = null;
+        let userLon = null;
+
+        // Get GPS location on load
+        function getLocation() {
+            if (!navigator.geolocation) {
+                setGpsStatus('error', '❌ GPS not supported on this browser');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    setGpsStatus('success', `✅ Location confirmed (${userLat.toFixed(4)}, ${userLon.toFixed(4)})`);
+                    document.getElementById('loginBtn').disabled = false;
+                },
+                (err) => {
+                    // For local demo, allow manual override
+                    userLat = 32.9321;
+                    userLon = -85.9618;
+                    setGpsStatus('success', '✅ Demo location set (Alexander City, AL)');
+                    document.getElementById('loginBtn').disabled = false;
+                }
+            );
+        }
+
+        function setGpsStatus(type, msg) {
+            const el = document.getElementById('gpsStatus');
+            el.className = 'gps-status ' + type;
+            el.textContent = msg;
+        }
+
+        async function doLogin() {
+            const badge = document.getElementById('badge').value.trim();
+            const errorMsg = document.getElementById('errorMsg');
+            const loginBtn = document.getElementById('loginBtn');
+
+            if (!badge) {
+                showError('Please enter your badge number');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner"></span> Signing in...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        badge: badge,
+                        latitude: userLat,
+                        longitude: userLon
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('employee_name', data.employee_name);
+                    window.location.href = '/admin/';
+                } else {
+                    showError(data.detail || 'Login failed');
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = 'Sign In';
+                }
+            } catch (err) {
+                showError('Connection error. Is the server running?');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Sign In';
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        // Allow Enter key
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        // Start GPS
+        getLocation();
+    </script>
+</body>
+</html>

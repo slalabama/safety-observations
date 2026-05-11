@@ -1,0 +1,293 @@
+html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Observations - Walk-Around Forms</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #1a2b4a; color: white; display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; }
+        .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo h2 { font-size: 16px; font-weight: 700; color: white; }
+        .sidebar-logo p { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+        .sidebar-logo .logo-icon { font-size: 28px; margin-bottom: 8px; }
+        .nav-section { padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-section-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; padding: 0 20px 8px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { border-left: 3px solid #4a9eff; }
+        .nav-icon { font-size: 18px; width: 24px; }
+        .sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .user-info { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .user-avatar { width: 36px; height: 36px; background: #4a9eff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        .user-name { font-size: 13px; font-weight: 600; color: white; }
+        .user-role { font-size: 11px; color: rgba(255,255,255,0.5); }
+        .btn-logout { width: 100%; padding: 8px; background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-logout:hover { background: rgba(255,0,0,0.2); color: white; }
+        .main { margin-left: 260px; flex: 1; display: flex; flex-direction: column; }
+        .topbar { background: white; padding: 16px 32px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; }
+        .topbar h1 { font-size: 20px; color: #1a2b4a; font-weight: 700; }
+        .content { padding: 32px; flex: 1; }
+        .layout { display: grid; grid-template-columns: 320px 1fr; gap: 24px; align-items: start; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+        .card-header h3 { font-size: 15px; font-weight: 700; color: #1a2b4a; }
+        .card-body { padding: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; font-family: inherit; }
+        .form-group input:focus, .form-group textarea:focus { border-color: #1a2b4a; }
+        .form-group textarea { resize: vertical; min-height: 70px; }
+        .btn-primary { width: 100%; padding: 11px; background: #1a2b4a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary:hover { background: #243d6b; }
+        .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: none; }
+        .alert.success { background: #d4edda; color: #155724; }
+        .alert.error { background: #f8d7da; color: #721c24; }
+        .forms-list { display: flex; flex-direction: column; gap: 16px; }
+        .form-item { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+        .form-item-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; }
+        .form-item-header:hover { background: #f8f9ff; }
+        .form-item-title { font-size: 15px; font-weight: 700; color: #1a2b4a; }
+        .form-item-meta { font-size: 12px; color: #999; margin-top: 2px; }
+        .badge-active { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #d4edda; color: #155724; }
+        .form-item-body { display: none; }
+        .form-item-body.open { display: block; }
+        .section-block { border-bottom: 1px solid #f0f0f0; }
+        .section-header { padding: 10px 16px; background: #1a2b4a; color: white; font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; }
+        .question-row { display: flex; align-items: center; padding: 9px 16px; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+        .question-row:last-child { border-bottom: none; }
+        .question-text { flex: 1; color: #333; }
+        .type-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin: 0 8px; white-space: nowrap; }
+        .pf { background: #fff3cd; color: #856404; }
+        .yn { background: #d4edda; color: #155724; }
+        .tx { background: #e8f0fe; color: #1a2b4a; }
+        .btn-edit { padding: 3px 10px; background: #1a2b4a; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; margin-right: 4px; }
+        .btn-del { padding: 3px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; }
+        .add-section-area { padding: 16px 20px; background: #f8f9fa; border-top: 2px solid #e8f0fe; }
+        .add-section-area h4 { font-size: 13px; font-weight: 700; color: #1a2b4a; margin-bottom: 10px; }
+        .inline-row { display: flex; gap: 8px; }
+        .inline-row input { flex: 1; padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px; outline: none; }
+        .inline-row input:focus { border-color: #1a2b4a; }
+        .btn-sm { padding: 8px 16px; background: #1a2b4a; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .add-q-area { padding: 12px 16px; background: #fff; border-top: 1px solid #f0f0f0; }
+        .add-q-area h5 { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .q-row { display: grid; grid-template-columns: 1fr 140px auto; gap: 8px; }
+        .q-row input, .q-row select { padding: 7px 10px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 12px; outline: none; }
+        .q-row input:focus, .q-row select:focus { border-color: #1a2b4a; }
+        .empty { padding: 20px; text-align: center; color: #999; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <div class="logo-icon">🦺</div>
+            <h2>Safety Observations</h2>
+            <p>Admin Portal</p>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a href="/admin/" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Management</div>
+            <a href="/admin/users" class="nav-item"><span class="nav-icon">👥</span> Employees</a>
+            <a href="/admin/observations" class="nav-item"><span class="nav-icon">📋</span> Observation Forms</a>
+            <a href="/admin/walkarounds" class="nav-item active"><span class="nav-icon">🚶</span> Walk-Around Forms</a>
+        </div>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">C</div>
+                <div>
+                    <div class="user-name" id="userName">Admin</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Sign Out</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <h1>🚶 Walk-Around Forms</h1>
+            <span style="font-size:13px;color:#666;" id="formCount">Loading...</span>
+        </div>
+        <div class="content">
+            <div class="layout">
+                <div class="card">
+                    <div class="card-header"><h3>➕ Create New Form</h3></div>
+                    <div class="card-body">
+                        <div class="alert" id="createAlert"></div>
+                        <div class="form-group">
+                            <label>Form Name *</label>
+                            <input type="text" id="formName" placeholder="e.g. Daily Safety Walk">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="formDesc" placeholder="Brief description..."></textarea>
+                        </div>
+                        <button class="btn-primary" onclick="createForm()">Create Form</button>
+                    </div>
+                </div>
+                <div id="formsList" class="forms-list">
+                    <div class="empty">Loading forms...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const empName = localStorage.getItem('employee_name') || 'Admin';
+        document.getElementById('userName').textContent = empName;
+        document.getElementById('userAvatar').textContent = empName.charAt(0).toUpperCase();
+
+        async function checkAuth() {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) window.location.href = '/admin/login';
+        }
+
+        async function loadForms() {
+            try {
+                const res = await fetch('/api/walkarounds/', { credentials: 'include' });
+                if (!res.ok) { window.location.href = '/admin/login'; return; }
+                const forms = await res.json();
+                document.getElementById('formCount').textContent = forms.length + ' forms';
+                const container = document.getElementById('formsList');
+                if (forms.length === 0) {
+                    container.innerHTML = '<div class="empty">No forms yet. Create one to get started.</div>';
+                    return;
+                }
+                container.innerHTML = forms.map(f => `
+                    <div class="form-item" id="form-${f.id}">
+                        <div class="form-item-header" onclick="toggleForm(${f.id})">
+                            <div>
+                                <div class="form-item-title">${f.name}</div>
+                                <div class="form-item-meta">${f.section_count} sections &middot; ${f.description || 'No description'}</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span class="badge-active">Active</span>
+                                <span style="color:#ccc;font-size:18px;">&#9660;</span>
+                            </div>
+                        </div>
+                        <div class="form-item-body" id="body-${f.id}">
+                            <div id="sections-${f.id}"><div class="empty">Loading...</div></div>
+                            <div class="add-section-area">
+                                <h4>Add Section</h4>
+                                <div class="inline-row">
+                                    <input type="text" id="secname-${f.id}" placeholder="Section name">
+                                    <button class="btn-sm" onclick="addSection(${f.id})">Add</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function toggleForm(fid) {
+            const body = document.getElementById('body-' + fid);
+            const isOpen = body.classList.contains('open');
+            document.querySelectorAll('.form-item-body').forEach(b => b.classList.remove('open'));
+            if (!isOpen) { body.classList.add('open'); await loadSections(fid); }
+        }
+
+        async function loadSections(fid) {
+            const res = await fetch('/api/walkarounds/' + fid, { credentials: 'include' });
+            const form = await res.json();
+            const container = document.getElementById('sections-' + fid);
+            if (!form.sections || form.sections.length === 0) {
+                container.innerHTML = '<div class="empty">No sections yet. Add one below.</div>';
+                return;
+            }
+            container.innerHTML = form.sections.map(s => {
+                const typeBadge = t => t === 'pass_fail' ? '<span class="type-badge pf">Pass/Fail</span>' : t === 'yes_no_na' ? '<span class="type-badge yn">Yes/No/NA</span>' : '<span class="type-badge tx">Text</span>';
+                const qRows = s.questions.length === 0
+                    ? '<div style="padding:10px 16px;color:#999;font-size:12px;">No questions</div>'
+                    : s.questions.map(q =>
+                        '<div class="question-row">'
+                        + '<span class="question-text">' + q.text + '</span>'
+                        + typeBadge(q.question_type)
+                        + '<button class="btn-edit" onclick="editQ(' + fid + ',' + s.id + ',' + q.id + ')">Edit</button>'
+                        + '<button class="btn-del" onclick="delQ(' + fid + ',' + s.id + ',' + q.id + ')">Del</button>'
+                        + '</div>'
+                    ).join('');
+                return '<div class="section-block">'
+                    + '<div class="section-header"><span>' + s.name + '</span><span style="opacity:0.7;font-size:11px;">' + s.questions.length + ' items</span></div>'
+                    + qRows
+                    + '<div class="add-q-area"><h5>Add Question to "' + s.name + '"</h5>'
+                    + '<div class="q-row">'
+                    + '<input type="text" id="qt-' + s.id + '" placeholder="Question text...">'
+                    + '<select id="qtype-' + s.id + '"><option value="pass_fail">Pass/Fail</option><option value="yes_no_na">Yes/No/NA</option><option value="text">Text</option></select>'
+                    + '<button class="btn-sm" onclick="addQ(' + fid + ',' + s.id + ')">Add</button>'
+                    + '</div></div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        async function createForm() {
+            const name = document.getElementById('formName').value.trim();
+            const desc = document.getElementById('formDesc').value.trim();
+            if (!name) { showAlert('createAlert','error','Form name is required'); return; }
+            const res = await fetch('/api/walkarounds/', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({name,description:desc||null}) });
+            if (res.ok) { showAlert('createAlert','success','Form created!'); document.getElementById('formName').value=''; document.getElementById('formDesc').value=''; loadForms(); }
+            else showAlert('createAlert','error','Failed to create form');
+        }
+
+        async function addSection(fid) {
+            const name = document.getElementById('secname-' + fid).value.trim();
+            if (!name) { alert('Section name required'); return; }
+            const res = await fetch('/api/walkarounds/' + fid + '/sections', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({name,order:0}) });
+            if (res.ok) { document.getElementById('secname-' + fid).value=''; await loadSections(fid); loadForms(); }
+        }
+
+        async function addQ(fid, sid) {
+            const text = document.getElementById('qt-' + sid).value.trim();
+            const qtype = document.getElementById('qtype-' + sid).value;
+            if (!text) { alert('Question text required'); return; }
+            const res = await fetch('/api/walkarounds/' + fid + '/sections/' + sid + '/questions', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({text,question_type:qtype,order:0}) });
+            if (res.ok) { document.getElementById('qt-' + sid).value=''; await loadSections(fid); }
+        }
+
+        async function delQ(fid, sid, qid) {
+            if (!confirm('Delete this question?')) return;
+            const res = await fetch('/api/walkarounds/' + fid + '/sections/' + sid + '/questions/' + qid, { method:'DELETE', credentials:'include' });
+            if (res.ok) await loadSections(fid);
+            else alert('Delete failed');
+        }
+
+        async function editQ(fid, sid, qid) {
+            const currentRow = event.target.closest('.question-row');
+            const currentText = currentRow.querySelector('.question-text').textContent;
+            const newText = prompt('Edit question:', currentText);
+            if (!newText || newText === currentText) return;
+            const res = await fetch('/api/walkarounds/' + fid + '/sections/' + sid + '/questions/' + qid, { method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({text:newText,question_type:'pass_fail',order:0}) });
+            if (res.ok) await loadSections(fid);
+            else alert('Edit failed');
+        }
+
+        function showAlert(id, type, msg) {
+            const el = document.getElementById(id);
+            el.className = 'alert ' + type;
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method:'POST', credentials:'include' });
+            localStorage.removeItem('employee_name');
+            window.location.href = '/admin/login';
+        }
+
+        checkAuth();
+        loadForms();
+    </script>
+</body>
+</html>"""
+
+with open('app/templates/admin_walkarounds_page.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+
+import os
+print('Written:', os.path.getsize('app/templates/admin_walkarounds_page.html'), 'bytes')
+print('Done!')

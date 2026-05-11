@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Walk-Around Template Administration</title>
+</head>
+<body>
+
+<h1>Walk-Around Template Administration</h1>
+
+<form action="/admin/walkarounds/new" method="get">
+    <button type="submit">Create New Walk-Around Template</button>
+</form>
+
+<h2>Existing Templates</h2>
+
+{% if templates %}
+    <ul>
+    {% for t in templates %}
+        <li>
+            {{ t.name }}
+            {% if not t.active %}
+                (Inactive)
+            {% endif %}
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No walk-around templates created yet.</p>
+{% endif %}
+
+</body>
+</html>
+from app.database import SessionLocal

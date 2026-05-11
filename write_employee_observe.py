@@ -1,0 +1,381 @@
+html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Safety Observation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; min-height: 100vh; }
+
+        /* LOGIN SCREEN */
+        .login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; background: #1a2b4a; }
+        .login-logo { font-size: 48px; margin-bottom: 12px; }
+        .login-title { font-size: 22px; font-weight: 700; color: white; margin-bottom: 4px; }
+        .login-sub { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 32px; }
+        .login-card { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 400px; }
+        .login-card label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
+        .login-card input { width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 18px; outline: none; letter-spacing: 2px; text-align: center; }
+        .login-card input:focus { border-color: #1a2b4a; }
+        .btn-login { width: 100%; padding: 14px; background: #1a2b4a; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+        .btn-login:active { background: #243d6b; }
+        .gps-status { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; background: #f8f9fa; color: #666; }
+        .gps-status.ok { background: #d4edda; color: #155724; }
+        .gps-status.err { background: #fff3cd; color: #856404; }
+        .error-msg { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; text-align: center; }
+
+        /* FORM SCREEN */
+        .form-screen { display: none; }
+        .form-header { background: #1a2b4a; color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 10; }
+        .form-header h1 { font-size: 17px; font-weight: 700; }
+        .form-header .employee-name { font-size: 12px; opacity: 0.7; }
+        .btn-back { background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 4px; }
+        .form-body { padding: 16px; max-width: 600px; margin: 0 auto; }
+        .section-title { font-size: 12px; font-weight: 700; color: #1a2b4a; text-transform: uppercase; letter-spacing: 1px; margin: 20px 0 10px; }
+        .field-card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .field-label { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 10px; display: block; }
+        .field-label .required { color: #dc3545; margin-left: 2px; }
+        .field-input { width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; outline: none; font-family: inherit; }
+        .field-input:focus { border-color: #1a2b4a; }
+        textarea.field-input { resize: vertical; min-height: 80px; }
+        select.field-input { background: white; }
+
+        /* YES/NO BUTTONS */
+        .yn-buttons { display: flex; gap: 10px; }
+        .yn-btn { flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; background: white; transition: all 0.2s; }
+        .yn-btn.yes.selected { border-color: #28a745; background: #d4edda; color: #155724; }
+        .yn-btn.no.selected { border-color: #dc3545; background: #f8d7da; color: #721c24; }
+
+        /* MEDIA UPLOAD */
+        .media-section { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+        .media-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .media-btn { padding: 14px; border: 2px dashed #e0e0e0; border-radius: 10px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 600; color: #666; background: #fafafa; transition: all 0.2s; }
+        .media-btn:active { border-color: #1a2b4a; background: #f0f4ff; }
+        .media-btn .icon { font-size: 24px; margin-bottom: 4px; }
+        #photoInput, #videoInput { display: none; }
+        .preview-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .preview-item { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; }
+        .preview-item img, .preview-item video { width: 100%; height: 100%; object-fit: cover; }
+        .preview-remove { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        /* SUBMIT */
+        .submit-section { padding: 16px; max-width: 600px; margin: 0 auto 32px; }
+        .btn-submit { width: 100%; padding: 16px; background: #28a745; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; }
+        .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-submit:active { background: #218838; }
+
+        /* SUCCESS SCREEN */
+        .success-screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px; text-align: center; background: #1a2b4a; }
+        .success-icon { font-size: 80px; margin-bottom: 20px; }
+        .success-title { font-size: 26px; font-weight: 700; color: white; margin-bottom: 8px; }
+        .success-sub { font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 32px; }
+        .btn-another { padding: 14px 32px; background: white; color: #1a2b4a; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; flex-direction: column; color: white; font-size: 16px; font-weight: 600; gap: 12px; }
+        .loading-overlay.show { display: flex; }
+    </style>
+</head>
+<body>
+
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        Submitting...
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-logo">🦺</div>
+        <div class="login-title">Safety Observation</div>
+        <div class="login-sub">SL Alabama, LLC</div>
+        <div class="login-card">
+            <label>Enter Your Badge Number</label>
+            <input type="number" id="badgeInput" placeholder="00000" inputmode="numeric" autofocus>
+            <div class="gps-status" id="gpsStatus">📍 Getting your location...</div>
+            <div class="error-msg" id="errorMsg"></div>
+            <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>Continue →</button>
+        </div>
+    </div>
+
+    <!-- FORM SCREEN -->
+    <div class="form-screen" id="formScreen">
+        <div class="form-header">
+            <div>
+                <div class="form-header h1" style="font-size:17px;font-weight:700;">Safety Observation</div>
+                <div class="employee-name" id="empNameDisplay"></div>
+            </div>
+            <button class="btn-back" onclick="goBack()">✕</button>
+        </div>
+
+        <div class="form-body">
+            <div class="section-title">Select Form</div>
+            <div class="field-card">
+                <label class="field-label">Observation Form <span class="required">*</span></label>
+                <select class="field-input" id="formSelect" onchange="loadFormQuestions()">
+                    <option value="">-- Select a form --</option>
+                </select>
+            </div>
+
+            <div class="section-title">Location</div>
+            <div class="field-card">
+                <label class="field-label">Where did this occur? <span class="required">*</span></label>
+                <input type="text" class="field-input" id="locationInput" placeholder="e.g. Building 3, Warehouse, Loading Dock">
+            </div>
+
+            <div id="dynamicQuestions"></div>
+
+            <div class="section-title">Photos & Videos</div>
+            <div class="media-section">
+                <div class="media-buttons">
+                    <div class="media-btn" onclick="document.getElementById('photoInput').click()">
+                        <div class="icon">📷</div>
+                        Take Photo
+                    </div>
+                    <div class="media-btn" onclick="document.getElementById('videoInput').click()">
+                        <div class="icon">🎥</div>
+                        Record Video
+                    </div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" capture="environment" multiple onchange="handleMedia(this, 'photo')">
+                <input type="file" id="videoInput" accept="video/*" capture="environment" onchange="handleMedia(this, 'video')">
+                <div class="preview-container" id="mediaPreview"></div>
+            </div>
+        </div>
+
+        <div class="submit-section">
+            <button class="btn-submit" id="submitBtn" onclick="submitObservation()">Submit Observation</button>
+        </div>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="success-screen" id="successScreen">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Submitted!</div>
+        <div class="success-sub">Your safety observation has been recorded and the safety team has been notified.</div>
+        <button class="btn-another" onclick="submitAnother()">Submit Another</button>
+    </div>
+
+    <script>
+        let userLat = null, userLon = null;
+        let currentEmployee = null;
+        let photoFiles = [], videoFile = null;
+        let questionAnswers = {};
+
+        // GPS
+        function getLocation() {
+            if (!navigator.geolocation) {
+                setGps('ok', '✅ Location not required for this device');
+                document.getElementById('loginBtn').disabled = false;
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    setGps('ok', '✅ Location confirmed');
+                    document.getElementById('loginBtn').disabled = false;
+                },
+                err => {
+                    userLat = 32.9321; userLon = -85.9618;
+                    setGps('err', '⚠️ Using default location');
+                    document.getElementById('loginBtn').disabled = false;
+                }
+            );
+        }
+
+        function setGps(type, msg) {
+            const el = document.getElementById('gpsStatus');
+            el.className = 'gps-status ' + (type === 'ok' ? 'ok' : 'err');
+            el.textContent = msg;
+        }
+
+        async function doLogin() {
+            const badge = document.getElementById('badgeInput').value.trim();
+            if (!badge) { showError('Please enter your badge number'); return; }
+
+            document.getElementById('loginBtn').disabled = true;
+            document.getElementById('loginBtn').innerHTML = '<span class="spinner"></span> Verifying...';
+            document.getElementById('errorMsg').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({badge, latitude: userLat, longitude: userLon})
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentEmployee = {badge, name: data.employee_name};
+                    document.getElementById('empNameDisplay').textContent = data.employee_name;
+                    await loadForms();
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('formScreen').style.display = 'block';
+                } else {
+                    showError(data.detail || 'Invalid badge number');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').textContent = 'Continue →';
+                }
+            } catch(e) {
+                showError('Connection error. Please try again.');
+                document.getElementById('loginBtn').disabled = false;
+                document.getElementById('loginBtn').textContent = 'Continue →';
+            }
+        }
+
+        async function loadForms() {
+            const res = await fetch('/api/observations/forms/', {credentials: 'include'});
+            const forms = await res.json();
+            const select = document.getElementById('formSelect');
+            select.innerHTML = '<option value="">-- Select a form --</option>';
+            forms.filter(f => f.active).forEach(f => {
+                select.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
+            });
+        }
+
+        async function loadFormQuestions() {
+            const formId = document.getElementById('formSelect').value;
+            const container = document.getElementById('dynamicQuestions');
+            container.innerHTML = '';
+            questionAnswers = {};
+            if (!formId) return;
+
+            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'});
+            const form = await res.json();
+
+            if (!form.questions || form.questions.length === 0) {
+                container.innerHTML = '<div style="padding:12px;color:#999;font-size:13px;">No questions for this form.</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="section-title">Questions</div>';
+            form.questions.sort((a,b) => a.order - b.order).forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'field-card';
+                const label = '<label class="field-label">' + q.text + (q.required ? '<span class="required">*</span>' : '') + '</label>';
+
+                if (q.question_type === 'checkbox') {
+                    card.innerHTML = label + '<div class="yn-buttons">'
+                        + '<button class="yn-btn yes" onclick="setYN(this,' + q.id + ',\'Yes\')">✅ Yes</button>'
+                        + '<button class="yn-btn no" onclick="setYN(this,' + q.id + ',\'No\')">❌ No</button>'
+                        + '</div>';
+                } else if (q.question_type === 'textarea') {
+                    card.innerHTML = label + '<textarea class="field-input" rows="3" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter details..."></textarea>';
+                } else if (q.question_type === 'select') {
+                    card.innerHTML = label + '<select class="field-input" onchange="questionAnswers[' + q.id + ']=this.value"><option value="">-- Select --</option><option>Yes</option><option>No</option><option>N/A</option></select>';
+                } else {
+                    card.innerHTML = label + '<input type="text" class="field-input" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter response...">';
+                }
+                container.appendChild(card);
+            });
+        }
+
+        function setYN(btn, qid, val) {
+            const parent = btn.closest('.yn-buttons');
+            parent.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            questionAnswers[qid] = val;
+        }
+
+        function handleMedia(input, type) {
+            const preview = document.getElementById('mediaPreview');
+            Array.from(input.files).forEach(file => {
+                if (type === 'photo') photoFiles.push(file);
+                else videoFile = file;
+
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                const url = URL.createObjectURL(file);
+                if (type === 'photo') {
+                    item.innerHTML = '<img src="' + url + '"><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
+                } else {
+                    item.innerHTML = '<video src="' + url + '"></video><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
+                }
+                preview.appendChild(item);
+            });
+        }
+
+        async function submitObservation() {
+            const formId = document.getElementById('formSelect').value;
+            const location = document.getElementById('locationInput').value.trim();
+
+            if (!formId) { alert('Please select a form'); return; }
+            if (!location) { alert('Please enter the location'); return; }
+
+            document.getElementById('loadingOverlay').classList.add('show');
+
+            const formData = new FormData();
+            formData.append('badge', currentEmployee.badge);
+            formData.append('form_id', formId);
+            formData.append('location', location);
+            formData.append('responses', JSON.stringify(questionAnswers));
+
+            if (photoFiles.length > 0) formData.append('photo', photoFiles[0]);
+            if (videoFile) formData.append('video', videoFile);
+
+            try {
+                const res = await fetch('/api/observations/forms/submit', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                document.getElementById('loadingOverlay').classList.remove('show');
+
+                if (res.ok) {
+                    document.getElementById('formScreen').style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'flex';
+                } else {
+                    const data = await res.json();
+                    alert('Submission failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch(e) {
+                document.getElementById('loadingOverlay').classList.remove('show');
+                alert('Connection error. Please try again.');
+            }
+        }
+
+        function submitAnother() {
+            photoFiles = []; videoFile = null; questionAnswers = {};
+            document.getElementById('mediaPreview').innerHTML = '';
+            document.getElementById('formSelect').value = '';
+            document.getElementById('locationInput').value = '';
+            document.getElementById('dynamicQuestions').innerHTML = '';
+            document.getElementById('successScreen').style.display = 'none';
+            document.getElementById('formScreen').style.display = 'block';
+        }
+
+        function goBack() {
+            if (confirm('Cancel this observation?')) {
+                document.getElementById('formScreen').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('badgeInput').value = '';
+                document.getElementById('loginBtn').disabled = false;
+                document.getElementById('loginBtn').textContent = 'Continue →';
+                currentEmployee = null;
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        document.getElementById('badgeInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+
+        getLocation();
+    </script>
+</body>
+</html>"""
+
+with open('app/templates/employee_observe.html', 'w', encoding='utf-8') as f:
+    f.write(html)
+
+import os
+print('Written:', os.path.getsize('app/templates/employee_observe.html'), 'bytes')
+print('Done!')

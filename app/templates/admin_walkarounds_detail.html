@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ template.name }} - Sections</title>
+</head>
+<body>
+
+<h1>{{ template.name }}</h1>
+
+<h2>Sections</h2>
+
+{% if sections %}
+    <ul>
+    {% for s in sections %}
+        <li>
+            <a href="/admin/walkarounds/sections/{{ s.id }}">{{ s.name }}</a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No sections added yet.</p>
+{% endif %}
+
+<h3>Add New Section</h3>
+
+<form method="post" action="/admin/walkarounds/{{ template.id }}/sections">
+    <input type="text" name="name" placeholder="Section name" required>
+    <button type="submit">Add Section</button>
+</form>
+
+<br>
+<a href="/admin/walkarounds">← Back to Templates</a>
+
+</body>
+</html>
