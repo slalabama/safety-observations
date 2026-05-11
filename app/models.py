@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
+﻿from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -51,25 +51,6 @@ class ObservationQuestion(Base):
     active = Column(Boolean, default=True)
     
     form = relationship("ObservationForm", back_populates="questions")
-
-class Observation(Base):
-    __tablename__ = "observations"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=False)
-    
-    location_description = Column(String, nullable=True)
-    latitude = Column(Float, nullable=True)
-    longitude = Column(Float, nullable=True)
-    responses = Column(JSON, nullable=True)
-    photo_path = Column(String, nullable=True)
-    video_path = Column(String, nullable=True)
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    employee = relationship("Employee", back_populates="observations")
-    form = relationship("ObservationForm", back_populates="observations")
 
 class WalkaroundForm(Base):
     __tablename__ = "walkaround_forms"
@@ -127,23 +108,6 @@ class WalkaroundSubmission(Base):
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
-
-class Observation(Base):
-    __tablename__ = "observations"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
-    observation_type = Column(String, nullable=False)  # safety_concern, near_miss, accident
-    date = Column(String, nullable=False)  # YYYY-MM-DD
-    time = Column(String, nullable=False)  # HH:MM
-    location = Column(Text, nullable=False)  # Free-text plant location
-    description = Column(Text, nullable=False)  # Detailed description of issue
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    employee = relationship("Employee", back_populates="observations")
-    media = relationship("ObservationMedia", back_populates="observation", cascade="all, delete-orphan")
 
 class ObservationMedia(Base):
     __tablename__ = "observation_media"
