@@ -123,3 +123,37 @@ class WalkaroundSubmission(Base):
     
     employee = relationship("Employee", back_populates="walkaround_submissions")
     form = relationship("WalkaroundForm", back_populates="submissions")
+    from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum
+from sqlalchemy.orm import relationship
+from datetime import datetime
+import enum
+
+class Observation(Base):
+    __tablename__ = "observations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    observation_type = Column(String, nullable=False)  # safety_concern, near_miss, accident
+    date = Column(String, nullable=False)  # YYYY-MM-DD
+    time = Column(String, nullable=False)  # HH:MM
+    location = Column(Text, nullable=False)  # Free-text plant location
+    description = Column(Text, nullable=False)  # Detailed description of issue
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    employee = relationship("Employee", back_populates="observations")
+    media = relationship("ObservationMedia", back_populates="observation", cascade="all, delete-orphan")
+
+class ObservationMedia(Base):
+    __tablename__ = "observation_media"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    observation_id = Column(Integer, ForeignKey("observations.id"), nullable=False)
+    file_path = Column(String, nullable=False)  # Path on Railway filesystem
+    file_type = Column(String, nullable=False)  # photo or video
+    file_name = Column(String, nullable=False)  # Original filename
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    observation = relationship("Observation", back_populates="media")
