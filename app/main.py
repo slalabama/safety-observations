@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
 
-from app.routers import admin_auth, admin_users, admin_observations, admin_walkarounds, admin_pages
+from app.routers import admin_auth, admin_users, admin_observations, admin_walkarounds, admin_pages, setup
 from app.database import engine, Base
 
 Base.metadata.create_all(bind=engine)
@@ -32,6 +32,7 @@ app.include_router(admin_walkarounds.router, prefix="/api")
 
 # HTML page routes
 app.include_router(admin_pages.router)
+app.include_router(setup.router)
 
 if os.path.exists("app/static"):
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
