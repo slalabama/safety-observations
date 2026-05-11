@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -14,7 +14,6 @@ class Employee(Base):
     email = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    observations = relationship("Observation", back_populates="employee")
     walkaround_submissions = relationship("WalkaroundSubmission", back_populates="employee")
 
 class Facility(Base):
@@ -37,7 +36,6 @@ class ObservationForm(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     questions = relationship("ObservationQuestion", back_populates="form", cascade="all, delete-orphan")
-    observations = relationship("Observation", back_populates="form")
 
 class ObservationQuestion(Base):
     __tablename__ = "observation_questions"
@@ -120,4 +118,3 @@ class ObservationMedia(Base):
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
-    observation = relationship("Observation", back_populates="media")
