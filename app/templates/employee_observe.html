@@ -371,7 +371,22 @@
             if (e.key === 'Enter') doLogin();
         }));
 
-        getLocation();
+                // Auto-initialize database on page load
+        async function initializeIfNeeded() {
+            try {
+                const res = await fetch('/debug/employees', { credentials: 'include' });
+                const employees = await res.json();
+                if (!employees || employees.length === 0) {
+                    console.log('Database empty, auto-initializing...');
+                    await fetch('/setup', { credentials: 'include' });
+                    console.log('Auto-setup complete');
+                }
+            } catch (err) {
+                console.log('Auto-setup check failed:', err);
+            }
+        }
+
+        initializeIfNeeded().then(() => getLocation());
         // Auto-enable login button after 5 seconds even if GPS fails
         setTimeout(() => {
             const btn = document.getElementById('loginBtn');
@@ -383,6 +398,7 @@
     </script>
 </body>
 </html>
+
 
 
 
