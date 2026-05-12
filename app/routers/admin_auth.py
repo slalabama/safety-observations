@@ -29,82 +29,77 @@ def get_db():
         db.close()
 
 def get_current_employee(request: Request, db: Session = Depends(get_db)):
-    """Validate session from database and check GPS location."""
+    """Validate session and check GPS location."""
     token = request.cookies.get("session_token")
     if not token:
-        raise HTTPException(status_code=401, detail="Unauthorized - no session token")
-    
-    # Look up session in database
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     session_record = db.query(SessionRecord).filter(SessionRecord.id == token).first()
     if not session_record:
-        raise HTTPException(status_code=401, detail="Unauthorized - invalid session")
-    
-    # Check if session expired
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
     if session_record.expires_at < datetime.utcnow():
         db.delete(session_record)
         db.commit()
         raise HTTPException(status_code=401, detail="Session expired")
-    
-    # Extend session expiration by 1 hour on each request
+
+    # Extend session on each request
     session_record.expires_at = datetime.utcnow() + timedelta(hours=1)
     db.commit()
-    
+
     employee = session_record.employee
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    
+
     if employee.status != "active":
         raise HTTPException(status_code=403, detail="Employee account is inactive")
-    
+
     return employee
 
 @router.post("/login")
-def login(request_body: LoginRequest, request: Request, db: Session = Depends(get_db)):
-    """Login with first and last name, GPS geofencing, creates database session."""
-    
-    full_name = (request_body.first_name.strip() + " " + request_body.last_name.strip()).strip()
+def login(request: LoginRequest, db: Session = Depends(get_db)):
+    """First/Last name login with GPS geofencing."""
+
+    full_name = (request.first_name.strip() + " " + request.last_name.strip()).strip()
     employee = db.query(Employee).filter(Employee.name.ilike(full_name)).first()
     if not employee:
         raise HTTPException(status_code=401, detail="Name not found in system")
-    
-    # Check employee status
+
     if employee.status != "active":
-        raise HTTPException(status_code=403, detail="Employee account is inactive or deactivated")
-    
+        raise HTTPException(status_code=403, detail="Employee account is inactive")
+
     facility = db.query(Facility).first()
     if not facility:
         raise HTTPException(status_code=500, detail="Facility not configured")
-    
+
     # Admins bypass GPS fence
     if employee.role != 'admin':
         distance_miles = calculate_distance(
-            request_body.latitude, request_body.longitude,
+            request.latitude, request.longitude,
             facility.latitude, facility.longitude
         )
-        
+
         if distance_miles > facility.radius_miles:
             raise HTTPException(
                 status_code=403,
                 detail=f"You are {distance_miles:.2f} miles from facility. Max allowed: {facility.radius_miles} miles."
             )
-    
-    # Create session in database (7-day expiration)
+
+    # Create DB session (7-day timeout)
     token = secrets.token_urlsafe(32)
     expires_at = datetime.utcnow() + timedelta(days=7)
-    
+
     session_record = SessionRecord(
         id=token,
         employee_id=employee.id,
-        expires_at=expires_at,
-        ip_address=request.client.host if request.client else None,
-        user_agent=request.headers.get("user-agent", "")
+        expires_at=expires_at
     )
     db.add(session_record)
-    
-    # Update last_login timestamp
+
+    # Update last_login
     employee.last_login = datetime.utcnow()
     db.commit()
-    
+
     response = Response(
         content='{"success": true, "message": "Login successful", "employee_name": "' + employee.name + '"}',
         media_type="application/json"
@@ -114,14 +109,14 @@ def login(request_body: LoginRequest, request: Request, db: Session = Depends(ge
 
 @router.post("/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
-    """Logout and delete session from database."""
+    """Logout and clear session."""
     token = request.cookies.get("session_token")
     if token:
         session_record = db.query(SessionRecord).filter(SessionRecord.id == token).first()
         if session_record:
             db.delete(session_record)
             db.commit()
-    
+
     response = Response(content='{"success": true, "message": "Logged out"}', media_type="application/json")
     response.delete_cookie("session_token")
     return response
@@ -134,7 +129,6 @@ def get_current_user(employee: Employee = Depends(get_current_employee)):
         "badge": employee.badge,
         "name": employee.name,
         "department": employee.department,
-        "email": employee.email,
         "role": employee.role,
         "status": employee.status
     }
