@@ -11,7 +11,8 @@ from app.utils.geo import calculate_distance
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 class LoginRequest(BaseModel):
-    badge: str
+    first_name: str
+    last_name: str
     latitude: float
     longitude: float
 
@@ -50,9 +51,10 @@ def get_current_employee(request: Request, db: Session = Depends(get_db)):
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     """Badge-only login with GPS geofencing."""
     
-    employee = db.query(Employee).filter(Employee.badge == request.badge).first()
+    full_name = (request.first_name.strip() + " " + request.last_name.strip()).strip()
+    employee = db.query(Employee).filter(Employee.name.ilike(full_name)).first()
     if not employee:
-        raise HTTPException(status_code=401, detail="Invalid badge number")
+        raise HTTPException(status_code=401, detail="Name not found in system")
     
     facility = db.query(Facility).first()
     if not facility:

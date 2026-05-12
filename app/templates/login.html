@@ -148,8 +148,10 @@
         <div class="error-msg" id="errorMsg"></div>
 
         <div class="form-group">
-            <label for="badge">Badge Number</label>
-            <input type="text" id="badge" placeholder="Enter your badge number" autofocus>
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" placeholder="First Name" autofocus>
+            <label for="lastName" style="margin-top:12px;display:block;">Last Name</label>
+            <input type="text" id="lastName" placeholder="Last Name">
         </div>
 
         <div class="gps-status" id="gpsStatus">
@@ -196,12 +198,13 @@
         }
 
         async function doLogin() {
-            const badge = document.getElementById('badge').value.trim();
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
             const errorMsg = document.getElementById('errorMsg');
             const loginBtn = document.getElementById('loginBtn');
 
-            if (!badge) {
-                showError('Please enter your badge number');
+            if (!firstName || !lastName) {
+                showError('Please enter both first and last name');
                 return;
             }
 
@@ -215,7 +218,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({
-                        badge: badge,
+                        first_name: firstName,
+                        last_name: lastName,
                         latitude: userLat,
                         longitude: userLon
                     })
