@@ -13,8 +13,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 class LoginRequest(BaseModel):
     first_name: str
     last_name: str
-    latitude: float
-    longitude: float
+    pin: str
 
 class LoginResponse(BaseModel):
     success: bool
@@ -132,3 +131,4 @@ def get_current_user(employee: Employee = Depends(get_current_employee)):
         "role": employee.role,
         "status": employee.status
     }
+
