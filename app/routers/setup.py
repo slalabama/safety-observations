@@ -18,7 +18,7 @@ def setup():
     try:
         charles = db.query(Employee).filter(Employee.name == "Charles Burks").first()
         if not charles:
-            charles = Employee(badge="00854", name="Charles Burks", department="HR", role="admin", email="charles@slalabama.com", status="active")
+            charles = Employee(badge="00854", name="Charles Burks", department="HR", role="admin", email="charles@slalabama.com", status="active", pin="1234")
             db.add(charles)
         else:
             charles.email = "charles@slalabama.com"
@@ -26,7 +26,7 @@ def setup():
 
         stephanie = db.query(Employee).filter(Employee.name == "Stephanie Jennings").first()
         if not stephanie:
-            stephanie = Employee(badge="48457", name="Stephanie Jennings", department="HR", role="admin", email="stephanie@slalabama.com", status="active")
+            stephanie = Employee(badge="48457", name="Stephanie Jennings", department="HR", role="admin", email="stephanie@slalabama.com", status="active", pin="5678")
             db.add(stephanie)
         else:
             stephanie.email = "stephanie@slalabama.com"
@@ -102,3 +102,4 @@ def debug_employees():
         return [{"id": e.id, "name": repr(e.name), "role": e.role} for e in employees]
     finally:
         db.close()
+
