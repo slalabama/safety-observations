@@ -372,7 +372,16 @@
         });
 
         getLocation();
+        // Auto-enable login button after 5 seconds even if GPS fails
+        setTimeout(() => {
+            const btn = document.getElementById('loginBtn');
+            if (btn.disabled) {
+                btn.disabled = false;
+                setGps('ok', '✅ Location optional - tap to continue');
+            }
+        }, 5000);
     </script>
 </body>
 </html>
+
 
