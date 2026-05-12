@@ -113,12 +113,12 @@
             <h3>✏️ Edit Employee</h3>
             <input type="hidden" id="editId">
             <div class="form-group">
-                <label>Badge Number</label>
-                <input type="text" id="editBadge">
+                <label>First Name</label>
+                <input type="text" id="editFirstName">
             </div>
             <div class="form-group">
-                <label>Full Name</label>
-                <input type="text" id="editName">
+                <label>Last Name</label>
+                <input type="text" id="editLastName">
             </div>
             <div class="form-group">
                 <label>Department</label>
@@ -278,9 +278,12 @@
         }
 
         function openEdit(id, badge, name, dept, email, role) {
+            const nameParts = (name || '').trim().split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
             document.getElementById('editId').value = id;
-            document.getElementById('editBadge').value = badge;
-            document.getElementById('editName').value = name;
+            document.getElementById('editFirstName').value = firstName;
+            document.getElementById('editLastName').value = lastName;
             document.getElementById('editDept').value = dept;
             document.getElementById('editEmail').value = email;
             document.getElementById('editRole').value = role;
@@ -293,19 +296,20 @@
 
         async function saveEdit() {
             const id = document.getElementById('editId').value;
-            const badge = document.getElementById('editBadge').value.trim();
-            const name = document.getElementById('editName').value.trim();
+            const firstName = document.getElementById('editFirstName').value.trim();
+            const lastName = document.getElementById('editLastName').value.trim();
+            const name = (firstName + ' ' + lastName).trim();
             const dept = document.getElementById('editDept').value.trim();
             const email = document.getElementById('editEmail').value.trim();
             const role = document.getElementById('editRole').value;
 
-            if (!badge || !name) { alert('Badge and name are required'); return; }
+            if (!firstName || !lastName) { alert('First and last name are required'); return; }
 
             const res = await fetch('/api/users/' + id, {
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'include',
-                body: JSON.stringify({badge, name, department: dept||null, email: email||null, role})
+                body: JSON.stringify({name, department: dept||null, email: email||null, role})
             });
 
             if (res.ok) { closeModal(); loadEmployees(); }
