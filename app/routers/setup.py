@@ -15,7 +15,8 @@ def setup():
         db.flush()
 
     # Admin users - idempotent (create if missing, update email if already exists)
-    charles = db.query(Employee).filter(Employee.name == "Charles Burks").first()
+    try:
+        charles = db.query(Employee).filter(Employee.name == "Charles Burks").first()
     if not charles:
         charles = Employee(badge="00854", name="Charles Burks", department="HR", role="admin", email="charles@slalabama.com", status="active")
         db.add(charles)
@@ -83,6 +84,9 @@ def setup():
 
     db.commit()
     db.close()
+    except Exception as e:
+        return {"status": "Error during setup", "error": str(e)}
+    
     return {"status": "Setup complete! Login with First Name + Last Name (admin: Charles Burks)"}
 
 
