@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 import csv
 import io
 from pydantic import BaseModel
+from typing import Optional
 
 from app.database import SessionLocal
 from app.models import Employee
@@ -12,16 +13,16 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 class EmployeeCreate(BaseModel):
     name: str
-    department: str = None
+    department: Optional[str] = None
     role: str = "basic"
-    email: str = None
+    email: Optional[str] = None
 
 class EmployeeResponse(BaseModel):
     id: int
     name: str
-    department: str = None
+    department: Optional[str] = None
     role: str = "basic"
-    email: str = None
+    email: Optional[str] = None
 
 class CSVImportResponse(BaseModel):
     total: int
