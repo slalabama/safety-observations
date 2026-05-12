@@ -208,8 +208,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Badge</th>
-                            <th>Name</th>
+                                                        <th>Name</th>
                             <th>Department</th>
                             <th>Role</th>
                             <th>Email</th>
@@ -254,13 +253,12 @@
             }
             tbody.innerHTML = employees.map(e => `
                 <tr>
-                    <td><strong>${e.badge}</strong></td>
-                    <td>${e.name}</td>
+                                        <td>${e.name}</td>
                     <td>${e.department ? '<span class="badge-dept">' + e.department + '</span>' : '<span style="color:#999">—</span>'}</td>
                     <td><span class="${e.role === 'admin' ? 'badge-admin' : 'badge-basic'}">${e.role === 'admin' ? 'Admin' : 'Basic'}</span></td>
                     <td style="font-size:12px;color:#666;">${e.email || '<span style="color:#ccc;">—</span>'}</td>
                     <td>
-                        <button class="btn-icon" onclick="openEdit(${e.id}, '${e.badge}', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}')" title="Edit">✏️</button>
+                        <button class="btn-icon" onclick="openEdit(${e.id}, '', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}')" title="Edit">✏️</button>
                         <button class="btn-icon" onclick="deleteEmployee(${e.id}, '${e.name}')" title="Delete" style="color:#dc3545;">🗑️</button>
                     </td>
                 </tr>
@@ -271,8 +269,7 @@
             const q = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allEmployees.filter(e =>
                 e.name.toLowerCase().includes(q) ||
-                e.badge.toLowerCase().includes(q) ||
-                (e.department && e.department.toLowerCase().includes(q))
+                                (e.department && e.department.toLowerCase().includes(q))
             );
             renderTable(filtered);
         }
