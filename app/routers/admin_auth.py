@@ -59,10 +59,10 @@ def get_current_employee(request: Request, db: Session = Depends(get_db)):
     return employee
 
 @router.post("/login")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
+def login(request_body: LoginRequest, request: Request, db: Session = Depends(get_db)):
     """Login with first and last name, GPS geofencing, creates database session."""
     
-    full_name = (request.first_name.strip() + " " + request.last_name.strip()).strip()
+    full_name = (request_body.first_name.strip() + " " + request_body.last_name.strip()).strip()
     employee = db.query(Employee).filter(Employee.name.ilike(full_name)).first()
     if not employee:
         raise HTTPException(status_code=401, detail="Name not found in system")
@@ -78,7 +78,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     # Admins bypass GPS fence
     if employee.role != 'admin':
         distance_miles = calculate_distance(
-            request.latitude, request.longitude,
+            request_body.latitude, request_body.longitude,
             facility.latitude, facility.longitude
         )
         
