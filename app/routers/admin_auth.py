@@ -132,3 +132,4 @@ def get_current_user(employee: Employee = Depends(get_current_employee)):
         "status": employee.status
     }
 
+
