@@ -14,11 +14,23 @@ def setup():
         db.add(Facility(name="Main Facility", latitude=32.9321, longitude=-85.9618, radius_miles=2.0))
         db.flush()
 
-    # Admin users
-    if not db.query(Employee).filter(Employee.badge == "00854").first():
-        db.add(Employee(badge="00854", name="Charles Burks", department="HR", role="admin"))
-    if not db.query(Employee).filter(Employee.badge == "48457").first():
-        db.add(Employee(badge="48457", name="Stephanie Jennings", department="HR", role="admin"))
+    # Admin users - idempotent (create if missing, update email if already exists)
+    charles = db.query(Employee).filter(Employee.name == "Charles Burks").first()
+    if not charles:
+        charles = Employee(badge="00854", name="Charles Burks", department="HR", role="admin", email="charles@slalabama.com", status="active")
+        db.add(charles)
+    else:
+        charles.email = "charles@slalabama.com"
+        charles.status = "active"
+    
+    stephanie = db.query(Employee).filter(Employee.name == "Stephanie Jennings").first()
+    if not stephanie:
+        stephanie = Employee(badge="48457", name="Stephanie Jennings", department="HR", role="admin", email="stephanie@slalabama.com", status="active")
+        db.add(stephanie)
+    else:
+        stephanie.email = "stephanie@slalabama.com"
+        stephanie.status = "active"
+    
     db.flush()
 
     # SWPPP Form

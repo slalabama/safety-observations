@@ -13,8 +13,23 @@ class Employee(Base):
     role = Column(String, default="basic")
     email = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+    status = Column(String, default="active")  # 'active', 'inactive', 'deactivated'
     
     walkaround_submissions = relationship("WalkaroundSubmission", back_populates="employee")
+    sessions = relationship("SessionRecord", back_populates="employee", cascade="all, delete-orphan")
+
+class SessionRecord(Base):
+    __tablename__ = "sessions"
+    
+    id = Column(String, primary_key=True, index=True)  # session token
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    
+    employee = relationship("Employee", back_populates="sessions")
 
 class Facility(Base):
     __tablename__ = "facilities"
