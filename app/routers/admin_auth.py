@@ -67,22 +67,11 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     if employee.status != "active":
         raise HTTPException(status_code=403, detail="Employee account is inactive")
 
-    facility = db.query(Facility).first()
-    if not facility:
-        raise HTTPException(status_code=500, detail="Facility not configured")
-
-    # Admins bypass GPS fence
-    if employee.role != 'admin':
-        distance_miles = calculate_distance(
-            request.latitude, request.longitude,
-            facility.latitude, facility.longitude
-        )
-
-        if distance_miles > facility.radius_miles:
-            raise HTTPException(
-                status_code=403,
-                detail=f"You are {distance_miles:.2f} miles from facility. Max allowed: {facility.radius_miles} miles."
-            )
+    # Validate PIN
+    if not employee.pin:
+        raise HTTPException(status_code=403, detail="PIN not set for this employee")
+    if employee.pin != request.pin:
+        raise HTTPException(status_code=401, detail="Invalid PIN")
 
     # Create DB session (7-day timeout)
     token = secrets.token_urlsafe(32)
@@ -131,6 +120,7 @@ def get_current_user(employee: Employee = Depends(get_current_employee)):
         "role": employee.role,
         "status": employee.status
     }
+
 
 
 
