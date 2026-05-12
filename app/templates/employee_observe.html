@@ -208,7 +208,7 @@
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
                     body: JSON.stringify({first_name: firstName, last_name: lastName, latitude: userLat, longitude: userLon})
-                });
+                }));
                 const data = await res.json();
                 if (res.ok) {
                     currentEmployee = {name: data.employee_name};
@@ -229,13 +229,13 @@
         }
 
         async function loadForms() {
-            const res = await fetch('/api/observations/forms/', {credentials: 'include'});
+            const res = await fetch('/api/observations/forms/', {credentials: 'include'}));
             const forms = await res.json();
             const select = document.getElementById('formSelect');
             select.innerHTML = '<option value="">-- Select a form --</option>';
             forms.filter(f => f.active).forEach(f => {
                 select.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
-            });
+            }));
         }
 
         async function loadFormQuestions() {
@@ -245,7 +245,7 @@
             questionAnswers = {};
             if (!formId) return;
 
-            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'});
+            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'}));
             const form = await res.json();
 
             if (!form.questions || form.questions.length === 0) {
@@ -272,7 +272,7 @@
                     card.innerHTML = label + '<input type="text" class="field-input" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter response...">';
                 }
                 container.appendChild(card);
-            });
+            }));
         }
 
         function setYN(btn, qid, val) {
@@ -297,7 +297,7 @@
                     item.innerHTML = '<video src="' + url + '"></video><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
                 }
                 preview.appendChild(item);
-            });
+            }));
         }
 
         async function submitObservation() {
@@ -323,7 +323,7 @@
                     method: 'POST',
                     credentials: 'include',
                     body: formData
-                });
+                }));
 
                 document.getElementById('loadingOverlay').classList.remove('show');
 
@@ -369,7 +369,7 @@
 
         ['firstName', 'lastName'].forEach(id => document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') doLogin();
-        });
+        }));
 
         getLocation();
         // Auto-enable login button after 5 seconds even if GPS fails
@@ -383,6 +383,7 @@
     </script>
 </body>
 </html>
+
 
 
 
