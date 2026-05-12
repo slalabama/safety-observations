@@ -72,3 +72,16 @@ def setup():
     db.commit()
     db.close()
     return {"status": "Setup complete! Login with First Name + Last Name (admin: Charles Burks)"}
+
+
+@router.get("/debug/employees")
+def debug_employees():
+    """Public endpoint to list employee names for debugging. Remove later."""
+    from app.database import SessionLocal
+    from app.models import Employee
+    db = SessionLocal()
+    try:
+        employees = db.query(Employee).all()
+        return [{"id": e.id, "name": repr(e.name), "role": e.role} for e in employees]
+    finally:
+        db.close()
