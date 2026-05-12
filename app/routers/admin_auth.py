@@ -84,7 +84,7 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         content='{"success": true, "message": "Login successful", "employee_name": "' + employee.name + '"}',
         media_type="application/json"
     )
-    response.set_cookie("session_token", token, httponly=True, max_age=43200)
+    response.set_cookie("session_token", token, httponly=True, secure=True, samesite="lax", max_age=43200, path="/")
     return response
 
 @router.post("/logout")
