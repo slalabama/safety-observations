@@ -168,11 +168,10 @@
         // GPS
         function getLocation() {
             if (!navigator.geolocation) {
-                setGps('ok', '✅ Location not required');
+                setGps('ok', '✅ Location not required for this device');
                 document.getElementById('loginBtn').disabled = false;
                 return;
             }
-            const options = { timeout: 5000, maximumAge: 0 };
             navigator.geolocation.getCurrentPosition(
                 pos => {
                     userLat = pos.coords.latitude;
@@ -182,91 +181,198 @@
                 },
                 err => {
                     userLat = 32.9321; userLon = -85.9618;
-                    setGps('ok', '✅ Using facility location');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                options
-            );
-            // Fallback after 6 seconds
-$file = "app/templates/employee_observe.html"
-$content = Get-Content $file -Raw
-
-# Add timeout to geolocation
-$oldGetLocation = 'navigator\.geolocation\.getCurrentPosition\(\s+pos => \{'
-$newGetLocation = 'navigator.geolocation.getCurrentPosition(pos => {'
-
-$content = $content -replace $oldGetLocation, 'navigator.geolocation.getCurrentPosition(pos => {'
-
-# Replace the whole function with timeout
-$oldFunc = 'function getLocation\(\) \{[\s\S]*?getLocation\(\);'
-$newFunc = @'
-function getLocation() {
-            if (!navigator.geolocation) {
-                setGps('ok', '✅ Location not required');
-                document.getElementById('loginBtn').disabled = false;
-                return;
-            }
-            const options = { timeout: 5000, maximumAge: 0 };
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    userLat = pos.coords.latitude;
-                    userLon = pos.coords.longitude;
-                    setGps('ok', '✅ Location confirmed');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                err => {
-                    userLat = 32.9321; userLon = -85.9618;
-                    setGps('ok', '✅ Using facility location');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                options
-            );
-            // Fallback after 6 seconds$file = "app/templates/employee_observe.html"
-$content = Get-Content $file -Raw
-
-# Add timeout to geolocation
-$oldGetLocation = 'navigator\.geolocation\.getCurrentPosition\(\s+pos => \{'
-$newGetLocation = 'navigator.geolocation.getCurrentPosition(pos => {'
-
-$content = $content -replace $oldGetLocation, 'navigator.geolocation.getCurrentPosition(pos => {'
-
-# Replace the whole function with timeout
-$oldFunc = 'function getLocation\(\) \{[\s\S]*?getLocation\(\);'
-$newFunc = @'
-function getLocation() {
-            if (!navigator.geolocation) {
-                setGps('ok', '✅ Location not required');
-                document.getElementById('loginBtn').disabled = false;
-                return;
-            }
-            const options = { timeout: 5000, maximumAge: 0 };
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    userLat = pos.coords.latitude;
-                    userLon = pos.coords.longitude;
-                    setGps('ok', '✅ Location confirmed');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                err => {
-                    userLat = 32.9321; userLon = -85.9618;
-                    setGps('ok', '✅ Using facility location');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                options
-            );
-            // Fallback after 6 seconds
-            setTimeout(() => {
-                if (!userLat) {
-                    userLat = 32.9321; userLon = -85.9618;
-                    setGps('ok', '✅ Using facility location');
+                    setGps('err', '⚠️ Using default location');
                     document.getElementById('loginBtn').disabled = false;
                 }
-            }, 6000);
+            );
         }
-        
+
+        function setGps(type, msg) {
+            const el = document.getElementById('gpsStatus');
+            el.className = 'gps-status ' + (type === 'ok' ? 'ok' : 'err');
+            el.textContent = msg;
+        }
+
+        async function doLogin() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            if (!firstName || !lastName) { showError('Please enter both first and last name'); return; }
+
+            document.getElementById('loginBtn').disabled = true;
+            document.getElementById('loginBtn').innerHTML = '<span class="spinner"></span> Verifying...';
+            document.getElementById('errorMsg').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({first_name: firstName, last_name: lastName, latitude: userLat, longitude: userLon})
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentEmployee = {name: data.employee_name};
+                    document.getElementById('empNameDisplay').textContent = data.employee_name;
+                    await loadForms();
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('formScreen').style.display = 'block';
+                } else {
+                    showError(data.detail || 'Invalid badge number');
+                    document.getElementById('loginBtn').disabled = false;
+                    document.getElementById('loginBtn').textContent = 'Continue →';
+                }
+            } catch(e) {
+                showError('Connection error. Please try again.');
+                document.getElementById('loginBtn').disabled = false;
+                document.getElementById('loginBtn').textContent = 'Continue →';
+            }
+        }
+
+        async function loadForms() {
+            const res = await fetch('/api/observations/forms/', {credentials: 'include'});
+            const forms = await res.json();
+            const select = document.getElementById('formSelect');
+            select.innerHTML = '<option value="">-- Select a form --</option>';
+            forms.filter(f => f.active).forEach(f => {
+                select.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
+            });
+        }
+
+        async function loadFormQuestions() {
+            const formId = document.getElementById('formSelect').value;
+            const container = document.getElementById('dynamicQuestions');
+            container.innerHTML = '';
+            questionAnswers = {};
+            if (!formId) return;
+
+            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'});
+            const form = await res.json();
+
+            if (!form.questions || form.questions.length === 0) {
+                container.innerHTML = '<div style="padding:12px;color:#999;font-size:13px;">No questions for this form.</div>';
+                return;
+            }
+
+            container.innerHTML = '<div class="section-title">Questions</div>';
+            form.questions.sort((a,b) => a.order - b.order).forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'field-card';
+                const label = '<label class="field-label">' + q.text + (q.required ? '<span class="required">*</span>' : '') + '</label>';
+
+                if (q.question_type === 'checkbox') {
+                    card.innerHTML = label + '<div class="yn-buttons">'
+                        + '<button class="yn-btn yes" onclick="setYN(this,' + q.id + ','Yes')">✅ Yes</button>'
+                        + '<button class="yn-btn no" onclick="setYN(this,' + q.id + ','No')">❌ No</button>'
+                        + '</div>';
+                } else if (q.question_type === 'textarea') {
+                    card.innerHTML = label + '<textarea class="field-input" rows="3" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter details..."></textarea>';
+                } else if (q.question_type === 'select') {
+                    card.innerHTML = label + '<select class="field-input" onchange="questionAnswers[' + q.id + ']=this.value"><option value="">-- Select --</option><option>Yes</option><option>No</option><option>N/A</option></select>';
+                } else {
+                    card.innerHTML = label + '<input type="text" class="field-input" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter response...">';
+                }
+                container.appendChild(card);
+            });
+        }
+
+        function setYN(btn, qid, val) {
+            const parent = btn.closest('.yn-buttons');
+            parent.querySelectorAll('.yn-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            questionAnswers[qid] = val;
+        }
+
+        function handleMedia(input, type) {
+            const preview = document.getElementById('mediaPreview');
+            Array.from(input.files).forEach(file => {
+                if (type === 'photo') photoFiles.push(file);
+                else videoFile = file;
+
+                const item = document.createElement('div');
+                item.className = 'preview-item';
+                const url = URL.createObjectURL(file);
+                if (type === 'photo') {
+                    item.innerHTML = '<img src="' + url + '"><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
+                } else {
+                    item.innerHTML = '<video src="' + url + '"></video><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
+                }
+                preview.appendChild(item);
+            });
+        }
+
+        async function submitObservation() {
+            const formId = document.getElementById('formSelect').value;
+            const location = document.getElementById('locationInput').value.trim();
+
+            if (!formId) { alert('Please select a form'); return; }
+            if (!location) { alert('Please enter the location'); return; }
+
+            document.getElementById('loadingOverlay').classList.add('show');
+
+            const formData = new FormData();
+            // Employee name tracked in currentEmployee.name
+            formData.append('form_id', formId);
+            formData.append('location', location);
+            formData.append('responses', JSON.stringify(questionAnswers));
+
+            if (photoFiles.length > 0) formData.append('photo', photoFiles[0]);
+            if (videoFile) formData.append('video', videoFile);
+
+            try {
+                const res = await fetch('/api/observations/forms/submit', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+
+                document.getElementById('loadingOverlay').classList.remove('show');
+
+                if (res.ok) {
+                    document.getElementById('formScreen').style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'flex';
+                } else {
+                    const data = await res.json();
+                    alert('Submission failed: ' + (data.detail || 'Unknown error'));
+                }
+            } catch(e) {
+                document.getElementById('loadingOverlay').classList.remove('show');
+                alert('Connection error. Please try again.');
+            }
+        }
+
+        function submitAnother() {
+            photoFiles = []; videoFile = null; questionAnswers = {};
+            document.getElementById('mediaPreview').innerHTML = '';
+            document.getElementById('formSelect').value = '';
+            document.getElementById('locationInput').value = '';
+            document.getElementById('dynamicQuestions').innerHTML = '';
+            document.getElementById('successScreen').style.display = 'none';
+            document.getElementById('formScreen').style.display = 'block';
+        }
+
+        function goBack() {
+            if (confirm('Cancel this observation?')) {
+                document.getElementById('formScreen').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
+                document.getElementById('loginBtn').disabled = false;
+                document.getElementById('loginBtn').textContent = 'Continue →';
+                currentEmployee = null;
+            }
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        ['firstName', 'lastName'].forEach(id => document.getElementById(id).addEventListener('keypress', e => {
+            if (e.key === 'Enter') doLogin();
+        });
+
         getLocation();
     </script>
 </body>
 </html>
-
 
