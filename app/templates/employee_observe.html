@@ -261,8 +261,8 @@
 
                 if (q.question_type === 'checkbox') {
                     card.innerHTML = label + '<div class="yn-buttons">'
-                        + '<button class="yn-btn yes" onclick="setYN(this, ' + q.id + ', 'Yes')">✅ Yes</button>'
-                        + '<button class="yn-btn no" onclick="setYN(this, ' + q.id + ', 'No')">❌ No</button>'
+                        + '<button class="yn-btn yes" onclick="setYN(this,' + q.id + ',\'Yes\')">✅ Yes</button>'
+                        + '<button class="yn-btn no" onclick="setYN(this,' + q.id + ',\'No\')">❌ No</button>'
                         + '</div>';
                 } else if (q.question_type === 'textarea') {
                     card.innerHTML = label + '<textarea class="field-input" rows="3" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter details..."></textarea>';
@@ -383,6 +383,7 @@
     </script>
 </body>
 </html>
+
 
 
 
