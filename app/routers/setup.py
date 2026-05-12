@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter
+from fastapi import APIRouter
 from app.database import SessionLocal, Base, engine
 from app.models import Employee, Facility, WalkaroundForm, WalkaroundSection, WalkaroundQuestion
 
@@ -71,4 +71,4 @@ def setup():
 
     db.commit()
     db.close()
-    return {"status": "Setup complete! Login with badge 00854"}
+    return {"status": "Setup complete! Login with First Name + Last Name (admin: Charles Burks)"}
