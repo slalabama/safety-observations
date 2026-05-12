@@ -91,8 +91,10 @@
         <div class="login-title">Safety Observation</div>
         <div class="login-sub">SL Alabama, LLC</div>
         <div class="login-card">
-            <label>Enter Your Badge Number</label>
-            <input type="number" id="badgeInput" placeholder="00000" inputmode="numeric" autofocus>
+            <label>First Name</label>
+            <input type="text" id="firstName" placeholder="First Name" autofocus>
+            <label style="margin-top:12px;display:block;">Last Name</label>
+            <input type="text" id="lastName" placeholder="Last Name">
             <div class="gps-status" id="gpsStatus">📍 Getting your location...</div>
             <div class="error-msg" id="errorMsg"></div>
             <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>Continue →</button>
@@ -192,8 +194,9 @@
         }
 
         async function doLogin() {
-            const badge = document.getElementById('badgeInput').value.trim();
-            if (!badge) { showError('Please enter your badge number'); return; }
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            if (!firstName || !lastName) { showError('Please enter both first and last name'); return; }
 
             document.getElementById('loginBtn').disabled = true;
             document.getElementById('loginBtn').innerHTML = '<span class="spinner"></span> Verifying...';
@@ -204,11 +207,11 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify({badge, latitude: userLat, longitude: userLon})
+                    body: JSON.stringify({first_name: firstName, last_name: lastName, latitude: userLat, longitude: userLon})
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    currentEmployee = {badge, name: data.employee_name};
+                    currentEmployee = {name: data.employee_name};
                     document.getElementById('empNameDisplay').textContent = data.employee_name;
                     await loadForms();
                     document.getElementById('loginScreen').style.display = 'none';
@@ -307,7 +310,7 @@
             document.getElementById('loadingOverlay').classList.add('show');
 
             const formData = new FormData();
-            formData.append('badge', currentEmployee.badge);
+            // Employee name tracked in currentEmployee.name
             formData.append('form_id', formId);
             formData.append('location', location);
             formData.append('responses', JSON.stringify(questionAnswers));
@@ -351,7 +354,7 @@
             if (confirm('Cancel this observation?')) {
                 document.getElementById('formScreen').style.display = 'none';
                 document.getElementById('loginScreen').style.display = 'flex';
-                document.getElementById('badgeInput').value = '';
+                document.getElementById('firstName').value = ''; document.getElementById('lastName').value = '';
                 document.getElementById('loginBtn').disabled = false;
                 document.getElementById('loginBtn').textContent = 'Continue →';
                 currentEmployee = null;
@@ -364,7 +367,7 @@
             el.style.display = 'block';
         }
 
-        document.getElementById('badgeInput').addEventListener('keypress', e => {
+        ['firstName', 'lastName'].forEach(id => document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') doLogin();
         });
 
