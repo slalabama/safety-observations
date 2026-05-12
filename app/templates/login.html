@@ -168,34 +168,7 @@
         let userLon = null;
 
         // Get GPS location on load
-        function getLocation() {
-            if (!navigator.geolocation) {
-                setGpsStatus('error', '❌ GPS not supported on this browser');
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    userLat = pos.coords.latitude;
-                    userLon = pos.coords.longitude;
-                    setGpsStatus('success', `✅ Location confirmed (${userLat.toFixed(4)}, ${userLon.toFixed(4)})`);
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                (err) => {
-                    // For local demo, allow manual override
-                    userLat = 32.9321;
-                    userLon = -85.9618;
-                    setGpsStatus('success', '✅ Demo location set (Alexander City, AL)');
-                    document.getElementById('loginBtn').disabled = false;
-                }
-            );
-        }
-
-        function setGpsStatus(type, msg) {
-            const el = document.getElementById('gpsStatus');
-            el.className = 'gps-status ' + type;
-            el.textContent = msg;
-        }
+        
 
         async function doLogin() {
             const firstName = document.getElementById('firstName').value.trim();
@@ -269,10 +242,11 @@
             }
         }
 
-        initializeIfNeeded().then(() => getLocation());
+        initializeIfNeeded();
     </script>
 </body>
 </html>
+
 
 
 
