@@ -91,13 +91,18 @@
         <div class="login-title">Safety Observation</div>
         <div class="login-sub">SL Alabama, LLC</div>
         <div class="login-card">
+            <div style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.4;">
+                Enter your <strong>First and Last Name</strong>, or your <strong>Employee ID</strong>.
+            </div>
             <label>First Name</label>
             <input type="text" id="firstName" placeholder="First Name" autofocus>
             <label style="margin-top:12px;display:block;">Last Name</label>
             <input type="text" id="lastName" placeholder="Last Name">
-            <div class="gps-status" id="gpsStatus">📍 Getting your location...</div>
+            <div style="text-align:center;color:#999;margin:12px 0;font-size:13px;">- OR -</div>
+            <label>Employee ID</label>
+            <input type="text" id="badge" placeholder="Employee ID" inputmode="numeric">
             <div class="error-msg" id="errorMsg"></div>
-            <button class="btn-login" id="loginBtn" onclick="doLogin()" disabled>Continue →</button>
+            <button class="btn-login" id="loginBtn" onclick="doLogin()">Continue</button>
         </div>
     </div>
 
@@ -166,76 +171,61 @@
         let questionAnswers = {};
 
         // GPS
-        function getLocation() {
-            if (!navigator.geolocation) {
-                setGps('ok', '✅ Location not required for this device');
-                document.getElementById('loginBtn').disabled = false;
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                pos => {
-                    userLat = pos.coords.latitude;
-                    userLon = pos.coords.longitude;
-                    setGps('ok', '✅ Location confirmed');
-                    document.getElementById('loginBtn').disabled = false;
-                },
-                err => {
-                    userLat = 32.9321; userLon = -85.9618;
-                    setGps('err', '⚠️ Using default location');
-                    document.getElementById('loginBtn').disabled = false;
-                }
-            );
-        }
+        
 
-        function setGps(type, msg) {
-            const el = document.getElementById('gpsStatus');
-            el.className = 'gps-status ' + (type === 'ok' ? 'ok' : 'err');
-            el.textContent = msg;
-        }
+        
 
         async function doLogin() {
             const firstName = document.getElementById('firstName').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
-            if (!firstName || !lastName) { showError('Please enter both first and last name'); return; }
+            const lastName  = document.getElementById('lastName').value.trim();
+            const badge     = document.getElementById('badge').value.trim();
 
-            document.getElementById('loginBtn').disabled = true;
-            document.getElementById('loginBtn').innerHTML = '<span class="spinner"></span> Verifying...';
+            if (!badge && (!firstName || !lastName)) {
+                showError('Enter first and last name, or your Employee ID.');
+                return;
+            }
+
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Verifying...';
             document.getElementById('errorMsg').style.display = 'none';
 
             try {
-                const res = await fetch('/api/auth/login', {
+                const res = await fetch('/api/auth/observe-login', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {'Content-Type':'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify({first_name: firstName, last_name: lastName, latitude: userLat, longitude: userLon})
-                }));
+                    body: JSON.stringify({ first_name: firstName, last_name: lastName, badge: badge })
+                });
                 const data = await res.json();
+
                 if (res.ok) {
-                    currentEmployee = {name: data.employee_name};
+                    currentEmployee = { name: data.employee_name, badge: data.badge };
                     document.getElementById('empNameDisplay').textContent = data.employee_name;
                     await loadForms();
                     document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('formScreen').style.display = 'block';
+                    document.getElementById('formScreen').style.display  = 'block';
                 } else {
-                    showError(data.detail || 'Invalid badge number');
-                    document.getElementById('loginBtn').disabled = false;
-                    document.getElementById('loginBtn').textContent = 'Continue →';
+                    const msg = typeof data.detail === 'string' ? data.detail : 'Login failed';
+                    showError(msg);
+                    btn.disabled = false;
+                    btn.textContent = 'Continue';
                 }
-            } catch(e) {
+            } catch (e) {
                 showError('Connection error. Please try again.');
-                document.getElementById('loginBtn').disabled = false;
-                document.getElementById('loginBtn').textContent = 'Continue →';
+                btn.disabled = false;
+                btn.textContent = 'Continue';
             }
         }
 
         async function loadForms() {
-            const res = await fetch('/api/observations/forms/', {credentials: 'include'}));
+            const res = await fetch('/api/observations/forms/', {credentials: 'include'});
             const forms = await res.json();
             const select = document.getElementById('formSelect');
             select.innerHTML = '<option value="">-- Select a form --</option>';
             forms.filter(f => f.active).forEach(f => {
                 select.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
-            }));
+            });
         }
 
         async function loadFormQuestions() {
@@ -245,7 +235,7 @@
             questionAnswers = {};
             if (!formId) return;
 
-            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'}));
+            const res = await fetch('/api/observations/forms/' + formId, {credentials: 'include'});
             const form = await res.json();
 
             if (!form.questions || form.questions.length === 0) {
@@ -272,7 +262,7 @@
                     card.innerHTML = label + '<input type="text" class="field-input" onchange="questionAnswers[' + q.id + ']=this.value" placeholder="Enter response...">';
                 }
                 container.appendChild(card);
-            }));
+            });
         }
 
         function setYN(btn, qid, val) {
@@ -297,7 +287,7 @@
                     item.innerHTML = '<video src="' + url + '"></video><button class="preview-remove" onclick="this.parentNode.remove()">×</button>';
                 }
                 preview.appendChild(item);
-            }));
+            });
         }
 
         async function submitObservation() {
@@ -323,7 +313,7 @@
                     method: 'POST',
                     credentials: 'include',
                     body: formData
-                }));
+                });
 
                 document.getElementById('loadingOverlay').classList.remove('show');
 
@@ -369,7 +359,7 @@
 
         ['firstName', 'lastName'].forEach(id => document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') doLogin();
-        }));
+        });
 
                 // Auto-initialize database on page load
         async function initializeIfNeeded() {
@@ -386,7 +376,7 @@
             }
         }
 
-        initializeIfNeeded().then(() => getLocation());
+        initializeIfNeeded();
         // Auto-enable login button after 5 seconds even if GPS fails
         setTimeout(() => {
             const btn = document.getElementById('loginBtn');

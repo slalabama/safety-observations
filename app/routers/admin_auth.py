@@ -122,8 +122,41 @@ def get_current_user(employee: Employee = Depends(get_current_employee)):
     }
 
 
+class ObserveLoginRequest(BaseModel):
+    first_name: str = ""
+    last_name: str = ""
+    badge: str = ""
 
+@router.post("/observe-login")
+def observe_login(req: ObserveLoginRequest, db: Session = Depends(get_db)):
+    badge = (req.badge or "").strip()
+    first = (req.first_name or "").strip()
+    last = (req.last_name or "").strip()
 
+    employee = None
+    if badge:
+        employee = db.query(Employee).filter(Employee.badge == badge).first()
+    elif first and last:
+        full = (first + " " + last).strip()
+        employee = db.query(Employee).filter(Employee.name.ilike(full)).first()
+    else:
+        raise HTTPException(status_code=400, detail="Provide either Employee ID, or both First and Last Name.")
 
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found in system")
+    if employee.status != "active":
+        raise HTTPException(status_code=403, detail="Employee account is inactive")
 
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=1)
+    db.add(SessionRecord(id=token, employee_id=employee.id, expires_at=expires_at))
+    employee.last_login = datetime.utcnow()
+    db.commit()
+
+    response = Response(
+        content='{"success": true, "employee_name": "' + employee.name + '", "badge": "' + (employee.badge or "") + '"}',
+        media_type="application/json"
+    )
+    response.set_cookie("session_token", token, httponly=True, secure=True, samesite="lax", max_age=3600, path="/")
+    return response
 
