@@ -78,3 +78,16 @@ def auto_seed_admins():
     except Exception as e:
         print(f"[startup] auto_seed_admins failed: {e}")
 
+@app.on_event("startup")
+def _ensure_observation_fields():
+    from sqlalchemy import text
+    from app.database import engine
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS incident_type VARCHAR"))
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS description TEXT"))
+            conn.commit()
+        print("[startup] observation extra columns ensured")
+    except Exception as e:
+        print(f"[startup] observation column migration failed: {e}")
+

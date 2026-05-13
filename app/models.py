@@ -59,7 +59,7 @@ class ObservationQuestion(Base):
     __tablename__ = "observation_questions"
     
     id = Column(Integer, primary_key=True, index=True)
-    form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=False)
+    form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=True)
     text = Column(String, nullable=False)
     question_type = Column(String, default="text")
     required = Column(Boolean, default=False)

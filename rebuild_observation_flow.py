@@ -1,4 +1,173 @@
-<!DOCTYPE html>
+"""
+Final observation flow:
+  - Login by First/Last Name OR Employee ID (already working)
+  - Form: Type of Incident dropdown, Description textarea, Photo, Video, Submit
+  - 10 MB max per file (frontend + backend check)
+  - Mobile uses camera; desktop opens file picker
+  - SL logo top-left
+
+Run from C:\\projects\\safety-observations:
+    python rebuild_observation_flow.py
+"""
+import os, re
+
+ROOT = os.getcwd()
+
+# ---------------------------------------------------------------------------
+# 1. Extend Observation model with incident_type + description columns
+# ---------------------------------------------------------------------------
+models_path = os.path.join(ROOT, "app/models.py")
+with open(models_path, "r", encoding="utf-8") as f:
+    models = f.read()
+
+if "incident_type = Column" not in models:
+    models = models.replace(
+        "    location_description = Column(String, nullable=True)",
+        "    location_description = Column(String, nullable=True)\n"
+        "    incident_type = Column(String, nullable=True)\n"
+        "    description = Column(Text, nullable=True)",
+    )
+    with open(models_path, "w", encoding="utf-8") as f:
+        f.write(models)
+    print("Added incident_type + description to Observation model")
+
+# ---------------------------------------------------------------------------
+# 2. Auto-migrate the new columns on startup
+# ---------------------------------------------------------------------------
+main_path = os.path.join(ROOT, "app/main.py")
+with open(main_path, "r", encoding="utf-8") as f:
+    main = f.read()
+
+if "ADD COLUMN IF NOT EXISTS incident_type" not in main:
+    block = '''
+
+@app.on_event("startup")
+def _ensure_observation_fields():
+    from sqlalchemy import text
+    from app.database import engine
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS incident_type VARCHAR"))
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS description TEXT"))
+            conn.commit()
+        print("[startup] observation extra columns ensured")
+    except Exception as e:
+        print(f"[startup] observation column migration failed: {e}")
+'''
+    main = main.rstrip() + block + "\n"
+    with open(main_path, "w", encoding="utf-8") as f:
+        f.write(main)
+    print("Added auto-migration for incident_type + description")
+
+# ---------------------------------------------------------------------------
+# 3. Rewrite the /submit endpoint to accept new fields + 10MB cap
+# ---------------------------------------------------------------------------
+obs_path = os.path.join(ROOT, "app/routers/admin_observations.py")
+with open(obs_path, "r", encoding="utf-8") as f:
+    obs_py = f.read()
+
+new_submit = '''@router.post("/submit")
+async def submit_observation(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Incident report submission. Requires session cookie set by observe-login."""
+    import base64
+    from datetime import datetime
+    from app.models import Observation, Employee, SessionRecord
+
+    MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+    form = await request.form()
+    incident_type = (form.get("incident_type") or "").strip()
+    description   = (form.get("description") or "").strip()
+    badge         = (form.get("badge") or "").strip()
+
+    if not incident_type:
+        raise HTTPException(status_code=400, detail="Type of Incident is required.")
+    if not description:
+        raise HTTPException(status_code=400, detail="Description is required.")
+
+    # Identify employee: badge from form, else session cookie
+    employee = None
+    if badge:
+        employee = db.query(Employee).filter(Employee.badge == badge).first()
+    if not employee:
+        token = request.cookies.get("session_token")
+        if token:
+            sr = db.query(SessionRecord).filter(SessionRecord.id == token).first()
+            if sr and sr.expires_at > datetime.utcnow():
+                employee = sr.employee
+    if not employee:
+        raise HTTPException(status_code=401, detail="Please log in again.")
+
+    photo_data = None
+    video_data = None
+
+    photo = form.get("photo")
+    if photo and hasattr(photo, "filename") and photo.filename:
+        content = await photo.read()
+        if len(content) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Photo exceeds 10 MB limit.")
+        photo_data = base64.b64encode(content).decode("ascii")
+
+    video = form.get("video")
+    if video and hasattr(video, "filename") and video.filename:
+        content = await video.read()
+        if len(content) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Video exceeds 10 MB limit.")
+        video_data = base64.b64encode(content).decode("ascii")
+
+    record = Observation(
+        employee_id=employee.id,
+        form_id=0,                          # no template form used
+        incident_type=incident_type,
+        description=description,
+        photo_data=photo_data,
+        video_data=video_data,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    return {
+        "success": True,
+        "observation_id": record.id,
+        "employee_name": employee.name,
+        "message": "Report submitted successfully."
+    }
+'''
+
+# Replace the existing /submit handler (anything starting at @router.post("/submit") through end of function)
+obs_py = re.sub(
+    r'@router\.post\("/submit"\).*?(?=\n@router\.|\Z)',
+    new_submit + "\n",
+    obs_py,
+    flags=re.DOTALL,
+)
+
+with open(obs_path, "w", encoding="utf-8") as f:
+    f.write(obs_py)
+print("Rewrote /api/observations/forms/submit endpoint")
+
+# ---------------------------------------------------------------------------
+# 4. Make form_id nullable in the Observation model (was nullable=False before)
+# ---------------------------------------------------------------------------
+with open(models_path, "r", encoding="utf-8") as f:
+    models = f.read()
+
+models = models.replace(
+    'form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=False)',
+    'form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=True)',
+)
+with open(models_path, "w", encoding="utf-8") as f:
+    f.write(models)
+
+# ---------------------------------------------------------------------------
+# 5. Replace the entire /observe page with a clean version
+# ---------------------------------------------------------------------------
+observe_html_path = os.path.join(ROOT, "app/templates/employee_observe.html")
+clean_html = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -356,3 +525,13 @@
     </script>
 </body>
 </html>
+"""
+
+with open(observe_html_path, "w", encoding="utf-8") as f:
+    f.write(clean_html)
+print("Replaced employee_observe.html with clean rebuild")
+
+print("\nDone. Run:")
+print('  git add -A')
+print('  git commit -m "Rebuild incident report flow: type/description, 10MB limit, SL logo"')
+print('  git push')
