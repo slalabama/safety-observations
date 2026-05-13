@@ -241,7 +241,7 @@ async def submit_observation(
 
     record = Observation(
         employee_id=employee.id,
-        form_id=0,                          # no template form used
+        # form_id omitted (no template)
         incident_type=incident_type,
         description=description,
         photo_data=photo_data,
@@ -257,4 +257,5 @@ async def submit_observation(
         "employee_name": employee.name,
         "message": "Report submitted successfully."
     }
+
 
