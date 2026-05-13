@@ -127,23 +127,73 @@ class ObserveLoginRequest(BaseModel):
     last_name: str = ""
     badge: str = ""
 
+def _match_employee(db, first: str, last: str, badge: str):
+    """Smart matching: badge exact, else flexible name search."""
+    badge = (badge or "").strip()
+    first = (first or "").strip()
+    last  = (last  or "").strip()
+
+    if badge:
+        return db.query(Employee).filter(Employee.badge == badge).first()
+
+    if not (first and last):
+        return None
+
+    # Pull all active employees and match in Python so we can be flexible.
+    employees = db.query(Employee).filter(Employee.status == "active").all()
+    f_low = first.lower()
+    l_low = last.lower()
+
+    # PASS 1: exact first + exact last (case-insensitive)
+    for e in employees:
+        ef = (getattr(e, "first_name", None) or "").strip().lower()
+        el = (getattr(e, "last_name",  None) or "").strip().lower()
+        if ef == f_low and el == l_low:
+            return e
+
+    # PASS 2: first matches, and last is any whitespace-separated word of stored last
+    for e in employees:
+        ef = (getattr(e, "first_name", None) or "").strip().lower()
+        el = (getattr(e, "last_name",  None) or "").strip().lower()
+        if ef == f_low and l_low in el.split():
+            return e
+
+    # PASS 3: parse name column "Last, First Middle" and try
+    for e in employees:
+        full = (e.name or "").strip()
+        if "," in full:
+            stored_last, rest = full.split(",", 1)
+            stored_last = stored_last.strip().lower()
+            stored_first = rest.strip().split()[0].lower() if rest.strip() else ""
+            if stored_first == f_low and (l_low == stored_last or l_low in stored_last.split()):
+                return e
+        # Also try "First Last" format
+        parts = full.lower().split()
+        if len(parts) >= 2 and parts[0] == f_low and l_low in parts[1:]:
+            return e
+
+    # PASS 4: substring fallback - first name matches start, last name matches any token
+    for e in employees:
+        ef = (getattr(e, "first_name", None) or "").strip().lower()
+        el = (getattr(e, "last_name",  None) or "").strip().lower()
+        name_l = (e.name or "").lower()
+        if f_low in name_l and l_low in name_l:
+            return e
+
+    return None
+
 @router.post("/observe-login")
 def observe_login(req: ObserveLoginRequest, db: Session = Depends(get_db)):
-    badge = (req.badge or "").strip()
-    first = (req.first_name or "").strip()
-    last = (req.last_name or "").strip()
-
-    employee = None
-    if badge:
-        employee = db.query(Employee).filter(Employee.badge == badge).first()
-    elif first and last:
-        full = (first + " " + last).strip()
-        employee = db.query(Employee).filter(Employee.name.ilike(full)).first()
-    else:
-        raise HTTPException(status_code=400, detail="Provide either Employee ID, or both First and Last Name.")
+    """Employee login for observations. No PIN, no GPS. Flexible name match or badge."""
+    employee = _match_employee(db, req.first_name, req.last_name, req.badge)
 
     if not employee:
-        raise HTTPException(status_code=404, detail="Employee not found in system")
+        if (req.badge or "").strip():
+            raise HTTPException(status_code=404, detail="Employee ID not found.")
+        if not (req.first_name and req.last_name):
+            raise HTTPException(status_code=400, detail="Enter first and last name, or your Employee ID.")
+        raise HTTPException(status_code=404, detail="No employee matched that name.")
+
     if employee.status != "active":
         raise HTTPException(status_code=403, detail="Employee account is inactive")
 

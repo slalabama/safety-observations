@@ -54,6 +54,8 @@ def _ensure_pin_column():
     try:
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin VARCHAR"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS first_name VARCHAR"))
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_name VARCHAR"))
             conn.commit()
             print("[startup] pin column ensured")
     except Exception as e:

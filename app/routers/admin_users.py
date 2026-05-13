@@ -46,65 +46,78 @@ async def import_csv(
     admin: Employee = Depends(get_current_employee)
 ):
     """
-    Import employees from CSV. Format: name, department, role, email
-    Skips duplicates by name.
+    Import employees from CSV.
+    Accepted headers (case-insensitive): badge, name, first_name, last_name, department, role, email
+    Matches by badge (unique); skips dupes.
     """
     contents = await file.read()
-    content_str = contents.decode('utf-8')
-
-    sample = content_str[:500]
-    delimiter = '\t' if '\t' in sample else ','
-    csv_reader = csv.reader(io.StringIO(content_str), delimiter=delimiter)
-    rows = list(csv_reader)
+    text = contents.decode("utf-8-sig")
+    sample = text[:500]
+    delim = "	" if "	" in sample else ","
+    reader = csv.DictReader(io.StringIO(text), delimiter=delim)
+    # Normalize header names
+    reader.fieldnames = [(h or "").strip().lower().replace(" ", "_") for h in (reader.fieldnames or [])]
 
     imported = 0
     skipped = 0
     duplicates = []
-
-    for idx, row in enumerate(rows, 1):
-        if not row:
-            continue
-        # Skip header row
-        if row[0].strip().lower() in ("name", "first name", "full name"):
-            continue
-
+    total = 0
+    for idx, row in enumerate(reader, 1):
+        total += 1
         try:
-            name = row[0].strip()
-            department = row[1].strip() if len(row) > 1 and row[1].strip() else None
-            role = row[2].strip().lower() if len(row) > 2 and row[2].strip() else "basic"
-            email = row[3].strip() if len(row) > 3 and row[3].strip() else None
+            badge = (row.get("badge") or row.get("emp_id") or row.get("employee_id") or "").strip()
+            name  = (row.get("name") or "").strip()
+            first = (row.get("first_name") or row.get("first") or "").strip()
+            last  = (row.get("last_name")  or row.get("last")  or "").strip()
+            dept  = (row.get("department") or row.get("position") or "").strip() or None
+            role  = (row.get("role") or "basic").strip().lower() or "basic"
+            email = (row.get("email") or "").strip() or None
 
+            if not name and first and last:
+                name = f"{first} {last}".strip()
             if not name:
+                skipped += 1
+                duplicates.append({"row": idx, "error": "no name"})
+                continue
+            if not badge:
+                skipped += 1
+                duplicates.append({"row": idx, "name": name, "error": "no badge/emp id"})
                 continue
 
-            existing = db.query(Employee).filter(Employee.name.ilike(name)).first()
+            existing = db.query(Employee).filter(Employee.badge == badge).first()
             if existing:
-                duplicates.append({"row": idx, "name": name})
+                # Update first/last/position if we now have them
+                if first and not existing.first_name: existing.first_name = first
+                if last  and not existing.last_name:  existing.last_name  = last
+                if dept and not existing.department:  existing.department = dept
+                duplicates.append({"row": idx, "name": name, "badge": badge})
                 skipped += 1
                 continue
 
-            employee = Employee(name=name, department=department, role=role, email=email)
-            db.add(employee)
+            db.add(Employee(
+                badge=badge,
+                name=name,
+                first_name=first or None,
+                last_name=last or None,
+                department=dept,
+                role=role,
+                email=email,
+                status="active",
+            ))
             try:
                 db.flush()
                 imported += 1
-            except Exception:
+            except Exception as e:
                 db.rollback()
-                duplicates.append({"row": idx, "name": name})
                 skipped += 1
-
+                duplicates.append({"row": idx, "name": name, "error": str(e)})
         except Exception as e:
             skipped += 1
             duplicates.append({"row": idx, "error": str(e)})
 
     db.commit()
+    return CSVImportResponse(total=total, imported=imported, skipped=skipped, duplicates=duplicates)
 
-    return CSVImportResponse(
-        total=len(rows) - 1,
-        imported=imported,
-        skipped=skipped,
-        duplicates=duplicates
-    )
 
 @router.post("/add")
 def add_employee(

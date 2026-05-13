@@ -16,6 +16,8 @@ class Employee(Base):
     last_login = Column(DateTime, nullable=True)
     status = Column(String, default="active")  # 'active', 'inactive', 'deactivated'
     pin = Column(String, nullable=True)
+    first_name = Column(String, nullable=True)
+    last_name = Column(String, nullable=True)
     
     walkaround_submissions = relationship("WalkaroundSubmission", back_populates="employee")
     sessions = relationship("SessionRecord", back_populates="employee", cascade="all, delete-orphan")
