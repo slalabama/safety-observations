@@ -121,4 +121,22 @@ class WalkaroundSubmission(Base):
     employee = relationship("Employee", back_populates="walkaround_submissions")
     form = relationship("WalkaroundForm", back_populates="submissions")
 
+class Observation(Base):
+    __tablename__ = "observations"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    employee_id = Column(Integer, ForeignKey("employees.id"), nullable=False)
+    form_id = Column(Integer, ForeignKey("observation_forms.id"), nullable=True)
+    location_description = Column(String, nullable=True)
+    incident_type = Column(String, nullable=True)
+    description = Column(Text, nullable=True)
+    responses = Column(JSON, nullable=True)
+    photo_path = Column(String, nullable=True)
+    video_path = Column(String, nullable=True)
+    photo_data = Column(Text, nullable=True)
+    video_data = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    employee = relationship("Employee")
+    form = relationship("ObservationForm")
 
