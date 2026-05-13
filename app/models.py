@@ -15,6 +15,7 @@ class Employee(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
     status = Column(String, default="active")  # 'active', 'inactive', 'deactivated'
+    pin = Column(String, nullable=True)
     
     walkaround_submissions = relationship("WalkaroundSubmission", back_populates="employee")
     sessions = relationship("SessionRecord", back_populates="employee", cascade="all, delete-orphan")
@@ -117,4 +118,5 @@ class WalkaroundSubmission(Base):
     
     employee = relationship("Employee", back_populates="walkaround_submissions")
     form = relationship("WalkaroundForm", back_populates="submissions")
+
 
