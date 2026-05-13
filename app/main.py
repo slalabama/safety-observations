@@ -81,13 +81,19 @@ def auto_seed_admins():
 @app.on_event("startup")
 def _ensure_observation_fields():
     from sqlalchemy import text
-    from app.database import engine
+    from app.database import engine, Base
+    from app.models import Observation, Employee, SessionRecord, Facility, ObservationForm, ObservationQuestion, WalkaroundForm, WalkaroundSection, WalkaroundQuestion, WalkaroundSubmission
     try:
+        # First, create any missing tables (idempotent)
+        Base.metadata.create_all(bind=engine)
+        # Then add new columns to existing tables
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS incident_type VARCHAR"))
             conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS description TEXT"))
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS photo_data TEXT"))
+            conn.execute(text("ALTER TABLE observations ADD COLUMN IF NOT EXISTS video_data TEXT"))
             conn.commit()
-        print("[startup] observation extra columns ensured")
+        print("[startup] observations table created and columns ensured")
     except Exception as e:
-        print(f"[startup] observation column migration failed: {e}")
+        print(f"[startup] observation migration failed: {e}")
 
