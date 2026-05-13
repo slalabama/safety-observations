@@ -359,7 +359,7 @@
 
         ['firstName', 'lastName'].forEach(id => document.getElementById(id).addEventListener('keypress', e => {
             if (e.key === 'Enter') doLogin();
-        });
+        }));
 
                 // Auto-initialize database on page load
         async function initializeIfNeeded() {
@@ -377,14 +377,6 @@
         }
 
         initializeIfNeeded();
-        // Auto-enable login button after 5 seconds even if GPS fails
-        setTimeout(() => {
-            const btn = document.getElementById('loginBtn');
-            if (btn.disabled) {
-                btn.disabled = false;
-                setGps('ok', '✅ Location optional - tap to continue');
-            }
-        }, 5000);
     </script>
 </body>
 </html>
