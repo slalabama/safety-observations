@@ -60,3 +60,19 @@ def _ensure_pin_column():
         print(f"[startup] pin column migration failed: {e}")
 # --------------------------------------------------------------------------
 
+
+@app.on_event("startup")
+def auto_seed_admins():
+    """Re-seed admins automatically on every deploy."""
+    try:
+        from app.database import SessionLocal
+        from app.routers.setup import run_setup
+        db = SessionLocal()
+        try:
+            run_setup(db)
+            print("[startup] auto_seed_admins complete")
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[startup] auto_seed_admins failed: {e}")
+

@@ -4,6 +4,32 @@ from app.models import Employee, Facility, WalkaroundForm, WalkaroundSection, Wa
 
 router = APIRouter()
 
+def run_setup(db):
+    """Callable version of setup() that takes an existing db session."""
+    from app.database import Base, engine
+    Base.metadata.create_all(bind=engine)
+    if not db.query(Facility).first():
+        db.add(Facility(name="Main Facility", latitude=32.9321, longitude=-85.9618, radius_miles=2.0))
+        db.flush()
+    charles = db.query(Employee).filter(Employee.name == "Charles Burks").first()
+    if not charles:
+        charles = Employee(badge="00854", name="Charles Burks", department="HR", role="admin", email="charles@slalabama.com", status="active", pin="1234")
+        db.add(charles)
+    else:
+        charles.email = "charles@slalabama.com"
+        charles.status = "active"
+        charles.pin = charles.pin or "1234"
+    stephanie = db.query(Employee).filter(Employee.name == "Stephanie Jennings").first()
+    if not stephanie:
+        stephanie = Employee(badge="48457", name="Stephanie Jennings", department="HR", role="admin", email="stephanie@slalabama.com", status="active", pin="5678")
+        db.add(stephanie)
+    else:
+        stephanie.email = "stephanie@slalabama.com"
+        stephanie.status = "active"
+        stephanie.pin = stephanie.pin or "5678"
+    db.commit()
+    return {"status": "ok"}
+
 @router.get("/setup")
 def setup():
     Base.metadata.create_all(bind=engine)
