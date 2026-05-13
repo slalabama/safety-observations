@@ -136,11 +136,11 @@
             <div class="section-title">Photos & Videos</div>
             <div class="media-section">
                 <div class="media-buttons">
-                    <div class="media-btn" onclick="document.getElementById('photoInput').click()">
+                    <div class="media-btn" onclick="document.getElementById('photoInput').value=null; document.getElementById('photoInput').click()">
                         <div class="icon">📷</div>
                         Take Photo
                     </div>
-                    <div class="media-btn" onclick="document.getElementById('videoInput').click()">
+                    <div class="media-btn" onclick="document.getElementById('videoInput').value=null; document.getElementById('videoInput').click()">
                         <div class="icon">🎥</div>
                         Record Video
                     </div>
@@ -380,6 +380,7 @@
     </script>
 </body>
 </html>
+
 
 
 
