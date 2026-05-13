@@ -117,7 +117,7 @@ def add_employee(
     if existing:
         raise HTTPException(status_code=400, detail=f"An employee named '{emp.name}' already exists")
 
-    employee = Employee(name=emp.name, department=emp.department, role=emp.role, email=emp.email)
+    employee = Employee(name=emp.name, department=emp.department, role=emp.role, email=emp.email, pin=emp.pin)
     db.add(employee)
     db.commit()
     db.refresh(employee)
@@ -127,7 +127,8 @@ def add_employee(
         name=employee.name,
         department=employee.department,
         role=employee.role,
-        email=employee.email
+        email=employee.email,
+        pin=employee.pin
     )
 
 @router.get("/list")
@@ -139,7 +140,7 @@ def list_employees(
     employees = db.query(Employee).all()
     return [
         EmployeeResponse(
-            id=e.id, name=e.name, department=e.department, role=e.role, email=e.email
+            id=e.id, name=e.name, department=e.department, role=e.role, email=e.email, pin=e.pin
         ) for e in employees
     ]
 
@@ -173,7 +174,7 @@ def update_employee(
     employee.department = emp.department
     employee.role = emp.role
     employee.email = emp.email
-        employee.pin = update.pin if update.pin is not None else employee.pin
+    employee.pin = emp.pin if emp.pin is not None else employee.pin
     db.commit()
     db.refresh(employee)
     return EmployeeResponse(
@@ -181,5 +182,6 @@ def update_employee(
         name=employee.name,
         department=employee.department,
         role=employee.role,
-        email=employee.email
+        email=employee.email,
+        pin=employee.pin
     )
