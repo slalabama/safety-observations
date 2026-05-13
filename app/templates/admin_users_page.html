@@ -127,6 +127,9 @@
             <div class="form-group">
                 <label>Email</label>
                 <input type="email" id="editEmail" placeholder="e.g. john@company.com">
+
+                    <label>PIN (4 digits)</label>
+                    <input type="password" id="editPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
             </div>
             <div class="form-group">
                 <label>Access Level</label>
@@ -258,7 +261,7 @@
                     <td><span class="${e.role === 'admin' ? 'badge-admin' : 'badge-basic'}">${e.role === 'admin' ? 'Admin' : 'Basic'}</span></td>
                     <td style="font-size:12px;color:#666;">${e.email || '<span style="color:#ccc;">—</span>'}</td>
                     <td>
-                        <button class="btn-icon" onclick="openEdit(${e.id}, '', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}')" title="Edit">✏️</button>
+                        <button class="btn-icon" onclick="openEdit(${e.id}, '', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}', '${e.pin||''}')" title="Edit">✏️</button>
                         <button class="btn-icon" onclick="deleteEmployee(${e.id}, '${e.name}')" title="Delete" style="color:#dc3545;">🗑️</button>
                     </td>
                 </tr>
@@ -274,7 +277,7 @@
             renderTable(filtered);
         }
 
-        function openEdit(id, badge, name, dept, email, role) {
+        function openEdit(id, badge, name, dept, email, role, pin) {
             const nameParts = (name || '').trim().split(' ');
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
@@ -283,6 +286,7 @@
             document.getElementById('editLastName').value = lastName;
             document.getElementById('editDept').value = dept;
             document.getElementById('editEmail').value = email;
+            document.getElementById('editPin').value = pin || '';
             document.getElementById('editRole').value = role;
             document.getElementById('editModal').classList.add('open');
         }
@@ -298,6 +302,7 @@
             const name = (firstName + ' ' + lastName).trim();
             const dept = document.getElementById('editDept').value.trim();
             const email = document.getElementById('editEmail').value.trim();
+            const pin = document.getElementById('editPin').value.trim();
             const role = document.getElementById('editRole').value;
 
             if (!firstName || !lastName) { alert('First and last name are required'); return; }
@@ -306,7 +311,7 @@
                 method: 'PUT',
                 headers: {'Content-Type': 'application/json'},
                 credentials: 'include',
-                body: JSON.stringify({name, department: dept||null, email: email||null, role})
+                body: JSON.stringify({name, department: dept||null, email: email||null, role, pin: pin||null})
             });
 
             if (res.ok) { closeModal(); loadEmployees(); }
@@ -398,4 +403,7 @@
     </script>
 </body>
 </html>
+
+
+
 

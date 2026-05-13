@@ -16,6 +16,7 @@ class EmployeeCreate(BaseModel):
     department: Optional[str] = None
     role: str = "basic"
     email: Optional[str] = None
+    pin: Optional[str] = None
 
 class EmployeeResponse(BaseModel):
     id: int
@@ -23,6 +24,7 @@ class EmployeeResponse(BaseModel):
     department: Optional[str] = None
     role: str = "basic"
     email: Optional[str] = None
+    pin: Optional[str] = None
 
 class CSVImportResponse(BaseModel):
     total: int
@@ -171,6 +173,7 @@ def update_employee(
     employee.department = emp.department
     employee.role = emp.role
     employee.email = emp.email
+        employee.pin = update.pin if update.pin is not None else employee.pin
     db.commit()
     db.refresh(employee)
     return EmployeeResponse(
