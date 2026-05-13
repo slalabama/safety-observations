@@ -131,4 +131,14 @@ def debug_employees():
     finally:
         db.close()
 
+@router.get("/debug/obs-schema")
+def debug_obs_schema():
+    """Show what columns the observations table actually has."""
+    from sqlalchemy import inspect, text
+    from app.database import engine
+    insp = inspect(engine)
+    if not insp.has_table("observations"):
+        return {"exists": False, "columns": []}
+    cols = [{"name": c["name"], "type": str(c["type"])} for c in insp.get_columns("observations")]
+    return {"exists": True, "columns": cols}
 
