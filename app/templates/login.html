@@ -174,11 +174,17 @@
         async function doLogin() {
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
+            const pin = document.getElementById('pin').value.trim();
             const errorMsg = document.getElementById('errorMsg');
             const loginBtn = document.getElementById('loginBtn');
 
             if (!firstName || !lastName) {
                 showError('Please enter both first and last name');
+                return;
+            }
+
+            if (!pin) {
+                showError('Please enter your PIN');
                 return;
             }
 
@@ -194,6 +200,7 @@
                     body: JSON.stringify({
                         first_name: firstName,
                         last_name: lastName,
+                        pin: pin,
                         latitude: userLat,
                         longitude: userLon
                     })
