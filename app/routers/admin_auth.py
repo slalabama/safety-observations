@@ -14,6 +14,7 @@ class LoginRequest(BaseModel):
     first_name: str
     last_name: str
     pin: str
+    pin: str
 
 class LoginResponse(BaseModel):
     success: bool

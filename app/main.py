@@ -45,3 +45,18 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+# --- Auto-migration: ensure pin column exists on employees ----------------
+@app.on_event("startup")
+def _ensure_pin_column():
+    from sqlalchemy import text
+    from app.database import engine
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE employees ADD COLUMN IF NOT EXISTS pin VARCHAR"))
+            conn.commit()
+            print("[startup] pin column ensured")
+    except Exception as e:
+        print(f"[startup] pin column migration failed: {e}")
+# --------------------------------------------------------------------------
+

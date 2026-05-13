@@ -23,6 +23,7 @@ def setup():
         else:
             charles.email = "charles@slalabama.com"
             charles.status = "active"
+            charles.pin = charles.pin or "1234"
 
         stephanie = db.query(Employee).filter(Employee.name == "Stephanie Jennings").first()
         if not stephanie:
@@ -31,6 +32,7 @@ def setup():
         else:
             stephanie.email = "stephanie@slalabama.com"
             stephanie.status = "active"
+            stephanie.pin = stephanie.pin or "5678"
 
         db.flush()
 
