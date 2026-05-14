@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
@@ -232,3 +232,80 @@ def update_question(form_id: int, section_id: int, question_id: int, question: Q
     db.commit()
     db.refresh(q)
     return {"id": q.id, "text": q.text, "question_type": q.question_type}
+
+
+@router.post("/submit")
+async def submit_walkaround(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Walk-around form submission. Identified by badge or observe-login session."""
+    import json, base64
+    from datetime import datetime
+    from app.models import WalkaroundSubmission, Employee, SessionRecord
+
+    MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+
+    form = await request.form()
+    try:
+        form_id = int(form.get("form_id", 0))
+    except (TypeError, ValueError):
+        form_id = 0
+    badge = (form.get("badge") or "").strip()
+    responses_raw = form.get("responses", "{}")
+    try:
+        responses = json.loads(responses_raw)
+    except Exception:
+        responses = {}
+
+    if not form_id:
+        raise HTTPException(status_code=400, detail="No walk-around form selected.")
+
+    # Identify employee
+    employee = None
+    if badge:
+        employee = db.query(Employee).filter(Employee.badge == badge).first()
+    if not employee:
+        token = request.cookies.get("session_token")
+        if token:
+            sr = db.query(SessionRecord).filter(SessionRecord.id == token).first()
+            if sr and sr.expires_at > datetime.utcnow():
+                employee = sr.employee
+    if not employee:
+        raise HTTPException(status_code=401, detail="Please log in again.")
+
+    photo_data = None
+    video_data = None
+
+    photo = form.get("photo")
+    if photo and hasattr(photo, "filename") and photo.filename:
+        content = await photo.read()
+        if len(content) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Photo exceeds 10 MB limit.")
+        photo_data = base64.b64encode(content).decode("ascii")
+
+    video = form.get("video")
+    if video and hasattr(video, "filename") and video.filename:
+        content = await video.read()
+        if len(content) > MAX_BYTES:
+            raise HTTPException(status_code=413, detail="Video exceeds 10 MB limit.")
+        video_data = base64.b64encode(content).decode("ascii")
+
+    record = WalkaroundSubmission(
+        employee_id=employee.id,
+        form_id=form_id,
+        responses=responses,
+        photo_data=photo_data,
+        video_data=video_data,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+
+    return {
+        "success": True,
+        "submission_id": record.id,
+        "employee_name": employee.name,
+        "message": "Walk-around submitted successfully."
+    }
+

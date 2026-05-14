@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walk-Around Inspection</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a2b4a; min-height: 100vh; color: #333; }
+        .page-logo { position: fixed; top: 16px; left: 16px; z-index: 10; }
+        .page-logo img { max-width: 110px; height: auto; display: block; }
+        .screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+        .card { background: white; border-radius: 12px; padding: 32px; width: 100%; max-width: 560px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        h1 { color: #1a2b4a; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        h2 { color: #1a2b4a; font-size: 16px; font-weight: 700; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #eef; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 20px; }
+        label { display: block; color: #333; font-size: 14px; font-weight: 600; margin: 12px 0 6px; }
+        input[type=text], select, textarea {
+            width: 100%; padding: 12px 14px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 16px; outline: none; font-family: inherit; background: white;
+        }
+        textarea { min-height: 70px; resize: vertical; }
+        input:focus, select:focus, textarea:focus { border-color: #1a2b4a; }
+        .or-divider { text-align: center; color: #999; margin: 14px 0 4px; font-size: 13px; }
+        .btn { display: block; width: 100%; padding: 14px; background: #1a2b4a; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 18px; }
+        .btn:hover { background: #243d6b; }
+        .btn:disabled { background: #999; cursor: not-allowed; }
+        .btn-submit { background: #28a745; }
+        .btn-submit:hover { background: #218838; }
+        .greeting { background: #eaf3ff; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 14px; color: #1a2b4a; }
+        .q-card { background: #fafbfc; border: 1px solid #eee; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        .q-label { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #333; }
+        .ynna { display: flex; gap: 8px; }
+        .ynna button {
+            flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer; background: white; transition: all 0.15s;
+        }
+        .ynna button.sel-yes { border-color: #28a745; background: #d4edda; color: #155724; }
+        .ynna button.sel-no  { border-color: #dc3545; background: #f8d7da; color: #721c24; }
+        .ynna button.sel-na  { border-color: #6c757d; background: #e2e3e5; color: #383d41; }
+        .media-row { display: flex; gap: 10px; margin-top: 8px; }
+        .media-btn { flex: 1; padding: 14px; border: 2px dashed #c0c0c0; border-radius: 8px; text-align: center; cursor: pointer; background: #fafafa; font-size: 14px; color: #555; }
+        .media-btn:hover { border-color: #1a2b4a; background: #f0f4ff; }
+        .media-btn .icon { display: block; font-size: 22px; margin-bottom: 4px; }
+        #photoInput, #videoInput { display: none; }
+        .preview { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+        .preview-item { position: relative; padding: 6px 10px; background: #eaf3ff; border-radius: 6px; font-size: 13px; }
+        .preview-item .remove { margin-left: 8px; color: #d33; cursor: pointer; font-weight: bold; }
+        .error-msg { display: none; background: #fff0f0; border: 1px solid #dc3545; color: #dc3545; padding: 10px 14px; border-radius: 8px; font-size: 14px; margin: 10px 0; }
+        .success-icon { font-size: 64px; text-align: center; margin-bottom: 16px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="page-logo">
+        <img src="https://www.sl-america.com/wp-content/uploads/logo.png" alt="SL Logo">
+    </div>
+
+    <!-- LOGIN -->
+    <div class="screen" id="loginScreen">
+        <div class="card">
+            <h1>Walk-Around Inspection</h1>
+            <div class="subtitle">SL Alabama, LLC</div>
+            <div style="font-size:13px;color:#666;margin-bottom:8px;">
+                Enter your <strong>First and Last Name</strong>, or your <strong>Employee ID</strong>.
+            </div>
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" placeholder="First Name">
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" placeholder="Last Name">
+            <div class="or-divider">— OR —</div>
+            <label for="badge">Employee ID</label>
+            <input type="text" id="badge" placeholder="Employee ID" inputmode="numeric">
+            <div class="error-msg" id="loginError"></div>
+            <button class="btn" id="loginBtn" onclick="doLogin()">Continue →</button>
+        </div>
+    </div>
+
+    <!-- FORM PICKER -->
+    <div class="screen" id="pickerScreen" style="display:none;">
+        <div class="card">
+            <div class="greeting">Inspecting as <strong id="empNameDisplay"></strong></div>
+            <h1>Select a Walk-Around Form</h1>
+            <div class="subtitle">Choose the inspection you want to complete.</div>
+            <label for="formSelect">Walk-Around Form</label>
+            <select id="formSelect">
+                <option value="">— Select a form —</option>
+            </select>
+            <div class="error-msg" id="pickerError"></div>
+            <button class="btn" onclick="loadForm()">Open Form →</button>
+            <button class="btn" style="background:#ddd;color:#333;margin-top:10px;" onclick="logout()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- FORM FILL -->
+    <div class="screen" id="formScreen" style="display:none;">
+        <div class="card">
+            <div class="greeting">Inspecting as <strong id="empNameDisplay2"></strong></div>
+            <h1 id="formTitle"></h1>
+            <div class="subtitle" id="formDesc"></div>
+
+            <div id="sectionsContainer"></div>
+
+            <label>Photo (optional, max 10 MB)</label>
+            <div class="media-row">
+                <div class="media-btn" onclick="pickFile('photoInput')">
+                    <span class="icon">📷</span><span id="photoBtnLabel">Add Photo</span>
+                </div>
+            </div>
+            <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handleFile(this,'photo')">
+
+            <label>Video (optional, max 10 MB)</label>
+            <div class="media-row">
+                <div class="media-btn" onclick="pickFile('videoInput')">
+                    <span class="icon">🎥</span><span id="videoBtnLabel">Add Video</span>
+                </div>
+            </div>
+            <input type="file" id="videoInput" accept="video/*" capture="environment" onchange="handleFile(this,'video')">
+
+            <div class="preview" id="mediaPreview"></div>
+
+            <div class="error-msg" id="formError"></div>
+            <button class="btn btn-submit" id="submitBtn" onclick="submitForm()">Submit Walk-Around</button>
+            <button class="btn" style="background:#ddd;color:#333;margin-top:10px;" onclick="backToPicker()">Back</button>
+        </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="screen" id="successScreen" style="display:none;">
+        <div class="card" style="text-align:center;">
+            <div class="success-icon">✅</div>
+            <h1>Submitted!</h1>
+            <div class="subtitle">Your walk-around inspection has been recorded.</div>
+            <button class="btn" onclick="backToPicker()">Do Another</button>
+            <button class="btn" style="background:#ddd;color:#333;margin-top:10px;" onclick="logout()">Done</button>
+        </div>
+    </div>
+
+    <script>
+        const MAX_BYTES = 10 * 1024 * 1024;
+        let currentEmployee = null;
+        let currentForm = null;
+        let answers = {};
+        let photoFile = null, videoFile = null;
+
+        function showError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.display = 'block'; }
+        function hideError(id) { document.getElementById(id).style.display = 'none'; }
+
+        async function doLogin() {
+            hideError('loginError');
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName  = document.getElementById('lastName').value.trim();
+            const badge     = document.getElementById('badge').value.trim();
+            if (!badge && (!firstName || !lastName)) {
+                showError('loginError', 'Enter first and last name, or your Employee ID.');
+                return;
+            }
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Verifying...';
+            try {
+                const res = await fetch('/api/auth/observe-login', {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include',
+                    body: JSON.stringify({ first_name: firstName, last_name: lastName, badge: badge })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    currentEmployee = { name: data.employee_name, badge: data.badge };
+                    document.getElementById('empNameDisplay').textContent = data.employee_name;
+                    document.getElementById('empNameDisplay2').textContent = data.employee_name;
+                    await loadFormList();
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('pickerScreen').style.display = 'flex';
+                } else {
+                    showError('loginError', typeof data.detail === 'string' ? data.detail : 'Login failed.');
+                }
+            } catch (e) {
+                showError('loginError', 'Connection error. Please try again.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Continue →';
+            }
+        }
+
+        async function loadFormList() {
+            const sel = document.getElementById('formSelect');
+            sel.innerHTML = '<option value="">— Select a form —</option>';
+            try {
+                const res = await fetch('/api/walkarounds/', { credentials: 'include' });
+                if (res.ok) {
+                    const forms = await res.json();
+                    forms.filter(f => f.active !== false).forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.id;
+                        opt.textContent = f.name;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) { /* ignore */ }
+        }
+
+        async function loadForm() {
+            hideError('pickerError');
+            const formId = document.getElementById('formSelect').value;
+            if (!formId) { showError('pickerError', 'Please select a form.'); return; }
+            try {
+                const res = await fetch('/api/walkarounds/' + formId, { credentials: 'include' });
+                if (!res.ok) { showError('pickerError', 'Could not load that form.'); return; }
+                currentForm = await res.json();
+                renderForm();
+                document.getElementById('pickerScreen').style.display = 'none';
+                document.getElementById('formScreen').style.display = 'flex';
+            } catch (e) {
+                showError('pickerError', 'Connection error. Please try again.');
+            }
+        }
+
+        function renderForm() {
+            answers = {};
+            photoFile = null; videoFile = null;
+            document.getElementById('mediaPreview').innerHTML = '';
+            document.getElementById('photoBtnLabel').textContent = 'Add Photo';
+            document.getElementById('videoBtnLabel').textContent = 'Add Video';
+            document.getElementById('formTitle').textContent = currentForm.name || 'Walk-Around';
+            document.getElementById('formDesc').textContent  = currentForm.description || '';
+
+            const container = document.getElementById('sectionsContainer');
+            container.innerHTML = '';
+            (currentForm.sections || []).forEach(section => {
+                const h = document.createElement('h2');
+                h.textContent = section.name;
+                container.appendChild(h);
+                (section.questions || []).forEach(q => {
+                    const card = document.createElement('div');
+                    card.className = 'q-card';
+                    const label = document.createElement('div');
+                    label.className = 'q-label';
+                    label.textContent = q.text;
+                    card.appendChild(label);
+
+                    if (q.question_type === 'text') {
+                        const inp = document.createElement('input');
+                        inp.type = 'text';
+                        inp.placeholder = 'Enter response...';
+                        inp.oninput = e => { answers[q.id] = e.target.value; };
+                        card.appendChild(inp);
+                    } else {
+                        // pass_fail and yes_no_na both render Yes / No / N/A
+                        const group = document.createElement('div');
+                        group.className = 'ynna';
+                        ['Yes','No','N/A'].forEach(val => {
+                            const b = document.createElement('button');
+                            b.type = 'button';
+                            b.textContent = val;
+                            b.onclick = () => {
+                                answers[q.id] = val;
+                                Array.from(group.children).forEach(c => c.className = '');
+                                b.className = val === 'Yes' ? 'sel-yes' : (val === 'No' ? 'sel-no' : 'sel-na');
+                            };
+                            group.appendChild(b);
+                        });
+                        card.appendChild(group);
+                    }
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        function pickFile(id) { const el = document.getElementById(id); el.value = null; el.click(); }
+
+        function handleFile(input, type) {
+            hideError('formError');
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > MAX_BYTES) {
+                showError('formError', (type === 'photo' ? 'Photo' : 'Video') + ' exceeds 10 MB limit.');
+                input.value = null;
+                return;
+            }
+            if (type === 'photo') { photoFile = file; document.getElementById('photoBtnLabel').textContent = 'Replace Photo'; }
+            else { videoFile = file; document.getElementById('videoBtnLabel').textContent = 'Replace Video'; }
+            renderPreview();
+        }
+
+        function renderPreview() {
+            const c = document.getElementById('mediaPreview');
+            c.innerHTML = '';
+            if (photoFile) {
+                const i = document.createElement('div');
+                i.className = 'preview-item';
+                i.innerHTML = '📷 ' + photoFile.name + ' (' + (photoFile.size/1024/1024).toFixed(2) + ' MB) <span class="remove" onclick="clearMedia(\'photo\')">×</span>';
+                c.appendChild(i);
+            }
+            if (videoFile) {
+                const i = document.createElement('div');
+                i.className = 'preview-item';
+                i.innerHTML = '🎥 ' + videoFile.name + ' (' + (videoFile.size/1024/1024).toFixed(2) + ' MB) <span class="remove" onclick="clearMedia(\'video\')">×</span>';
+                c.appendChild(i);
+            }
+        }
+
+        function clearMedia(type) {
+            if (type === 'photo') { photoFile = null; document.getElementById('photoInput').value = null; document.getElementById('photoBtnLabel').textContent = 'Add Photo'; }
+            else { videoFile = null; document.getElementById('videoInput').value = null; document.getElementById('videoBtnLabel').textContent = 'Add Video'; }
+            renderPreview();
+        }
+
+        async function submitForm() {
+            hideError('formError');
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting...';
+
+            const fd = new FormData();
+            fd.append('form_id', currentForm.id);
+            fd.append('responses', JSON.stringify(answers));
+            if (currentEmployee && currentEmployee.badge) fd.append('badge', currentEmployee.badge);
+            if (photoFile) fd.append('photo', photoFile);
+            if (videoFile) fd.append('video', videoFile);
+
+            try {
+                const res = await fetch('/api/walkarounds/submit', {
+                    method: 'POST', credentials: 'include', body: fd
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('formScreen').style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'flex';
+                } else {
+                    showError('formError', typeof data.detail === 'string' ? data.detail : 'Submission failed.');
+                }
+            } catch (e) {
+                showError('formError', 'Connection error. Please try again.');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Submit Walk-Around';
+            }
+        }
+
+        function backToPicker() {
+            document.getElementById('formScreen').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'none';
+            document.getElementById('formSelect').value = '';
+            document.getElementById('pickerScreen').style.display = 'flex';
+        }
+
+        function logout() {
+            currentEmployee = null; currentForm = null; answers = {};
+            photoFile = null; videoFile = null;
+            ['firstName','lastName','badge'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('pickerScreen').style.display = 'none';
+            document.getElementById('formScreen').style.display = 'none';
+            document.getElementById('successScreen').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
+
+        ['firstName','lastName','badge'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); });
+        });
+    </script>
+</body>
+</html>

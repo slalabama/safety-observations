@@ -97,3 +97,17 @@ def _ensure_observation_fields():
     except Exception as e:
         print(f"[startup] observation migration failed: {e}")
 
+@app.on_event("startup")
+def _ensure_walkaround_submission_fields():
+    from sqlalchemy import text
+    from app.database import engine, Base
+    try:
+        Base.metadata.create_all(bind=engine)
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE walkaround_submissions ADD COLUMN IF NOT EXISTS photo_data TEXT"))
+            conn.execute(text("ALTER TABLE walkaround_submissions ADD COLUMN IF NOT EXISTS video_data TEXT"))
+            conn.commit()
+        print("[startup] walkaround_submissions columns ensured")
+    except Exception as e:
+        print(f"[startup] walkaround_submissions migration failed: {e}")
+
