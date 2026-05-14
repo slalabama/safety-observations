@@ -142,3 +142,14 @@ def debug_obs_schema():
     cols = [{"name": c["name"], "type": str(c["type"])} for c in insp.get_columns("observations")]
     return {"exists": True, "columns": cols}
 
+@router.get("/debug/wa-schema")
+def debug_wa_schema():
+    """Show columns of walkaround_submissions table."""
+    from sqlalchemy import inspect
+    from app.database import engine
+    insp = inspect(engine)
+    if not insp.has_table("walkaround_submissions"):
+        return {"exists": False, "columns": []}
+    cols = [{"name": c["name"], "type": str(c["type"])} for c in insp.get_columns("walkaround_submissions")]
+    return {"exists": True, "columns": cols}
+
