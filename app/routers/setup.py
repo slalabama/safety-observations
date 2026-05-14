@@ -68,7 +68,7 @@ def setup():
             db.add(form1)
             db.flush()
             sections1 = [
-                ("Header Information", [("Inspection Date","text"),("Inspector Name","text"),("Weather Conditions","text"),("Inspection Location","text"),("Permit No.","text")]),
+                ("Header Information", [("Inspection Date","date"),("Inspector Name","text"),("Weather Conditions","text"),("Inspection Location","text"),("Permit No.","text")]),
                 ("1. SWPPP Documentation", [("Current SWPPP available on site","pass_fail"),("SWPPP reflects current construction activities","pass_fail"),("Material inventory list up to date","pass_fail"),("Spill Response Plan included","pass_fail"),("SDS available for hazardous materials","pass_fail")]),
                 ("2. Drainage Areas & Outfalls", [("Storm drains free of debris","pass_fail"),("Outfalls clearly identified","pass_fail"),("Evidence of discoloration, foam, sheen","pass_fail"),("Erosion at discharge points","pass_fail")]),
                 ("3. Material Labeling", [("All drums, tanks, totes, and containers labeled","pass_fail"),("Labels clearly identify material contents","pass_fail"),("Labels are legible and weather resistant","pass_fail"),("No unlabeled or mislabeled containers","pass_fail"),("Temporary/secondary containers labeled","pass_fail"),("Labeled materials match those listed in the SWPPP","pass_fail")]),
@@ -95,13 +95,13 @@ def setup():
             db.add(form2)
             db.flush()
             sections2 = [
-                ("Facility & Inspection Information", [("Inspector Name & Title","text"),("Inspection Type (Quarterly/Corrective/Follow-Up)","text"),("Date of Inspection","text"),("Time of Inspection","text"),("Weather Conditions","text"),("Rainfall Amount (inches)","text")]),
+                ("Facility & Inspection Information", [("Inspector Name & Title","text"),("Inspection Type (Quarterly/Corrective/Follow-Up)","text"),("Date of Inspection","date"),("Time of Inspection","text"),("Weather Conditions","text"),("Rainfall Amount (inches)","text")]),
                 ("1. Drainage Areas & Outfalls", [("Storm drains free of debris","yes_no_na"),("Outfalls clearly identified","yes_no_na"),("Evidence of discoloration, foam, sheen","yes_no_na"),("Erosion at discharge points","yes_no_na")]),
                 ("2. Material Handling & Storage", [("Materials stored under cover","yes_no_na"),("Containers properly labeled","yes_no_na"),("Secondary containment intact","yes_no_na"),("No leaks observed","yes_no_na")]),
                 ("3. Good Housekeeping", [("Work areas clean","yes_no_na"),("Dumpsters closed & covered","yes_no_na"),("Spill kits available & stocked","yes_no_na"),("No leaks observed","yes_no_na")]),
                 ("4. Spill & Leak Review", [("Any spills since last inspection?","yes_no_na"),("If yes, Spill Report completed?","yes_no_na"),("Location of spill (if applicable)","text")]),
-                ("5. Corrective Actions", [("Issue Identified","text"),("Action Required","text"),("Responsible Person","text"),("Completion Date","text")]),
-                ("Inspector Certification", [("I certify this inspection was conducted per SWPPP and Alabama NPDES requirements","yes_no_na"),("Inspector Signature","text"),("Date","text")]),
+                ("5. Corrective Actions", [("Issue Identified","text"),("Action Required","text"),("Responsible Person","text"),("Completion Date","date")]),
+                ("Inspector Certification", [("I certify this inspection was conducted per SWPPP and Alabama NPDES requirements","yes_no_na"),("Inspector Signature","text"),("Date","date")]),
             ]
             for sec_idx, (sname, questions) in enumerate(sections2):
                 sec = WalkaroundSection(form_id=form2.id, name=sname, order=sec_idx, active=True)
@@ -152,4 +152,3 @@ def debug_wa_schema():
         return {"exists": False, "columns": []}
     cols = [{"name": c["name"], "type": str(c["type"])} for c in insp.get_columns("walkaround_submissions")]
     return {"exists": True, "columns": cols}
-
