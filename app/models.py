@@ -115,6 +115,8 @@ class WalkaroundSubmission(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     responses = Column(JSON, nullable=True)
+    photo_data = Column(Text, nullable=True)
+    video_data = Column(Text, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
