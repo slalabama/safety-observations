@@ -239,7 +239,7 @@
 
                     if (q.question_type === 'text') {
                         const inp = document.createElement('input');
-                        if (/date/i.test(q.text)) {
+                        if (q.text.toLowerCase().indexOf("date") !== -1) {
                             inp.type = 'date';
                         } else {
                             inp.type = 'text';
