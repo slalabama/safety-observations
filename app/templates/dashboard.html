@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Safety Observations - Dashboard</title>
+    <title>Safety 1st - Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -335,32 +335,32 @@
     <div class="sidebar">
         <div class="sidebar-logo">
             <img src="https://www.sl-america.com/wp-content/uploads/logo.png" alt="SL Logo" style="max-width:140px;height:auto;display:block;margin-bottom:8px;">
-            <h2>Safety Observations</h2>
+            <h2>Safety 1st</h2>
             <p>Admin Portal</p>
         </div>
 
         <div class="nav-section">
             <div class="nav-section-title">Main</div>
             <a href="/admin/" class="nav-item active">
-                <span class="nav-icon">📊</span> Dashboard
+                <span class="nav-icon">ðŸ“Š</span> Dashboard
             </a>
         </div>
 
         <div class="nav-section">
             <div class="nav-section-title">Management</div>
             <a href="/admin/users" class="nav-item">
-                <span class="nav-icon">👥</span> Employees
+                <span class="nav-icon">ðŸ‘¥</span> Employees
             </a>
             <a href="/admin/observations" class="nav-item">
-                <span class="nav-icon">📋</span> Observation Forms
+                <span class="nav-icon">ðŸ“‹</span> Observation Forms
             </a>
             <a href="/admin/walkarounds" class="nav-item">
-                <span class="nav-icon">🚶</span> Walk-Around Forms
+                <span class="nav-icon">ðŸš¶</span> Walk-Around Forms
             </a>
             <a href="/observe" class="nav-item" target="_blank">
-                <span class="nav-icon">📝</span> Submit Observation
+                <span class="nav-icon">ðŸ“</span> Submit Observation
             </a>
-            <a href="/walkaround" class="nav-item" target="_blank"><span class="nav-icon">🚶</span> Submit Walk-Around</a>
+            <a href="/walkaround" class="nav-item" target="_blank"><span class="nav-icon">ðŸš¶</span> Submit Walk-Around</a>
         </div>
 
         <div class="sidebar-footer">
@@ -371,7 +371,7 @@
                     <div class="user-role">Administrator</div>
                 </div>
             </div>
-            <button class="btn-logout" onclick="logout()">🚪 Sign Out</button>
+            <button class="btn-logout" onclick="logout()">ðŸšª Sign Out</button>
         </div>
     </div>
 
@@ -388,17 +388,17 @@
             <div class="stats-grid">
                 <div class="stat-card navy">
                     <div class="stat-label">Total Employees</div>
-                    <div class="stat-value" id="statEmployees">—</div>
+                    <div class="stat-value" id="statEmployees">â€”</div>
                     <div class="stat-sub">Registered in system</div>
                 </div>
                 <div class="stat-card blue">
                     <div class="stat-label">Observation Forms</div>
-                    <div class="stat-value" id="statObsForms">—</div>
+                    <div class="stat-value" id="statObsForms">â€”</div>
                     <div class="stat-sub">Active forms</div>
                 </div>
                 <div class="stat-card green">
                     <div class="stat-label">Walk-Around Forms</div>
-                    <div class="stat-value" id="statWalkForms">—</div>
+                    <div class="stat-value" id="statWalkForms">â€”</div>
                     <div class="stat-sub">Active checklists</div>
                 </div>
                 <div class="stat-card orange">
@@ -412,19 +412,19 @@
             <div class="section-title">Quick Actions</div>
             <div class="quick-actions">
                 <a href="/admin/users" class="action-btn">
-                    <div class="action-icon">👤</div>
+                    <div class="action-icon">ðŸ‘¤</div>
                     <div class="action-label">Add Employee</div>
                 </a>
                 <a href="/admin/observations" class="action-btn">
-                    <div class="action-icon">📝</div>
+                    <div class="action-icon">ðŸ“</div>
                     <div class="action-label">New Observation Form</div>
                 </a>
                 <a href="/admin/walkarounds" class="action-btn">
-                    <div class="action-icon">📋</div>
+                    <div class="action-icon">ðŸ“‹</div>
                     <div class="action-label">New Walk-Around</div>
                 </a>
                 <a href="/admin/users" class="action-btn">
-                    <div class="action-icon">📥</div>
+                    <div class="action-icon">ðŸ“¥</div>
                     <div class="action-label">Import Employees</div>
                 </a>
             </div>
@@ -434,7 +434,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>Observation Forms</h3>
-                        <a href="/admin/observations" class="view-all">View All →</a>
+                        <a href="/admin/observations" class="view-all">View All â†’</a>
                     </div>
                     <div class="card-body">
                         <table>
@@ -455,7 +455,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>Walk-Around Forms</h3>
-                        <a href="/admin/walkarounds" class="view-all">View All →</a>
+                        <a href="/admin/walkarounds" class="view-all">View All â†’</a>
                     </div>
                     <div class="card-body">
                         <table>
@@ -565,4 +565,5 @@
     </script>
 </body>
 </html>
+
 
