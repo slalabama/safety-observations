@@ -272,7 +272,7 @@
                     <td style="font-size:12px;color:#666;">${e.pin ? '••••' : '<span style="color:#ccc;">—</span>'}</td>
                     <td>
                         <button class="btn-icon" onclick="openEdit(${e.id})" title="Edit">✏️</button>
-                        <button class="btn-icon" onclick="deleteEmployee(${e.id}, ${JSON.stringify(e.name)})" title="Delete" style="color:#dc3545;">🗑️</button>
+                        <button class="btn-icon" onclick="deleteEmployee(${e.id})" title="Delete" style="color:#dc3545;">🗑️</button>
                     </td>
                 </tr>
             `).join('');
