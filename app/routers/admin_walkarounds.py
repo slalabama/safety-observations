@@ -54,6 +54,9 @@ def get_db():
 _TYPE_NORMALIZE = {
     "pass_fail": "pass_fail", "pass/fail": "pass_fail", "pass-fail": "pass_fail",
     "passfail": "pass_fail", "p/f": "pass_fail",
+    "yes_no_na": "yes_no_na", "yes/no/na": "yes_no_na", "yes/no/n/a": "yes_no_na",
+    "yes-no-na": "yes_no_na", "yesnona": "yes_no_na", "y/n/na": "yes_no_na",
+    "y/n/n/a": "yes_no_na", "ynna": "yes_no_na",
     "yes_no": "yes_no", "yes/no": "yes_no", "yes-no": "yes_no",
     "yesno": "yes_no", "y/n": "yes_no",
     "text": "text", "string": "text", "freeform": "text", "comment": "text",
