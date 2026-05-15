@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 import os
 from pathlib import Path
 
@@ -42,6 +42,10 @@ if os.path.exists("app/static"):
 @app.get("/")
 def root():
     return RedirectResponse(url="/admin/login")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse("app/static/favicon.ico")
 
 @app.get("/health")
 def health():
