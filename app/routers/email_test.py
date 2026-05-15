@@ -1,48 +1,59 @@
-from fastapi import APIRouter, HTTPException
+"""
+Email test endpoints.
+
+GET /test-email           -> send to NOTIFY_EMAIL (or EMAIL_FROM if unset)
+GET /test-email?to=<addr> -> send to a specific address
+GET /test-email-debug     -> show SMTP config (password masked) without sending
+
+Both endpoints always return JSON so we can see exactly what happened
+instead of a generic 500.
+"""
+import os
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
 from app.utils.email_sender import send_email
 
-router = APIRouter(tags=["EmailTest"])
+router = APIRouter()
 
 
 @router.get("/test-email")
-def test_email(to: str = None):
-    """
-    Test SMTP by sending a small email.
-    Usage: /test-email?to=cburks@slworld.com
-    """
-    if not to:
-        raise HTTPException(status_code=400, detail="Pass ?to=email@address.com")
+def test_email(to: str | None = None):
+    target = (
+        to
+        or os.environ.get("NOTIFY_EMAIL")
+        or os.environ.get("EMAIL_FROM")
+        or os.environ.get("SMTP_USER")
+    )
+    if not target:
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "detail": "no recipient: pass ?to=<addr> or set NOTIFY_EMAIL"},
+        )
 
-    success, message = send_email(
-        to_addresses=to,
-        subject="Safety Observations: SMTP test",
-        html_body="<p>If you can read this, SMTP is configured correctly.</p>"
-                  "<p>Sent from the Safety Observations app.</p>"
+    ok, detail = send_email(
+        to_addr=target,
+        subject="Safety 1st — SMTP test",
+        body="If you can read this, outbound mail from Railway is working.\n\n"
+             "Sent by the Safety 1st test endpoint.",
     )
 
-    if not success:
-        raise HTTPException(status_code=500, detail=message)
-    return {"status": "sent", "detail": message}
+    return JSONResponse(
+        status_code=200 if ok else 502,
+        content={"ok": ok, "to": target, "detail": detail},
+    )
+
+
 @router.get("/test-email-debug")
 def test_email_debug():
-    """Return what SMTP config the app is loading."""
-    import os, socket
-    host = os.getenv("SMTP_HOST", "")
-    port = os.getenv("SMTP_PORT", "")
-    user = os.getenv("SMTP_USER", "")
-    has_pwd = bool(os.getenv("SMTP_PASSWORD"))
-    
-    # Try DNS resolution
-    dns_result = None
-    try:
-        dns_result = socket.gethostbyname(host) if host else "no host set"
-    except Exception as e:
-        dns_result = f"DNS error: {e}"
-    
+    """Inspect SMTP config without sending. Password is masked."""
+    pwd = os.environ.get("SMTP_PASSWORD", "")
     return {
-        "SMTP_HOST": host,
-        "SMTP_PORT": port,
-        "SMTP_USER": user,
-        "SMTP_PASSWORD_set": has_pwd,
-        "host_resolves_to": dns_result
+        "smtp_host":     os.environ.get("SMTP_HOST", ""),
+        "smtp_port":     os.environ.get("SMTP_PORT", ""),
+        "smtp_user":     os.environ.get("SMTP_USER", ""),
+        "email_from":    os.environ.get("EMAIL_FROM", ""),
+        "notify_email":  os.environ.get("NOTIFY_EMAIL", "(unset — falls back to EMAIL_FROM)"),
+        "password_set":  bool(pwd),
+        "password_len":  len(pwd),
     }
