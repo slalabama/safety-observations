@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
@@ -24,6 +24,9 @@ def observations_page(request: Request):
 @router.get("/admin/walkarounds", response_class=HTMLResponse)
 def walkarounds_page(request: Request):
     return templates.TemplateResponse("admin_walkarounds_page.html", {"request": request})
+@router.get("/admin/submissions", response_class=HTMLResponse)
+def submissions_page(request: Request):
+    return templates.TemplateResponse("admin_submissions_page.html", {"request": request})
 
 @router.get("/observe", response_class=HTMLResponse)
 def observe_page(request: Request):
