@@ -18,6 +18,9 @@ class Employee(Base):
     pin = Column(String, nullable=True)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
+    middle_name = Column(String, nullable=True)
+    position = Column(String, nullable=True)
+    shift = Column(String, nullable=True)
     
     walkaround_submissions = relationship("WalkaroundSubmission", back_populates="employee")
     sessions = relationship("SessionRecord", back_populates="employee", cascade="all, delete-orphan")

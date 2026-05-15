@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 import csv
 import io
+import re
 from pydantic import BaseModel
 from typing import Optional
 
@@ -11,26 +12,45 @@ from app.routers.admin_auth import get_current_employee
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+
+# ---------- schemas ----------
+
 class EmployeeCreate(BaseModel):
     name: str
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     department: Optional[str] = None
+    position: Optional[str] = None
+    shift: Optional[str] = None
     role: str = "basic"
     email: Optional[str] = None
     pin: Optional[str] = None
 
+
 class EmployeeResponse(BaseModel):
     id: int
+    badge: Optional[str] = None
     name: str
+    first_name: Optional[str] = None
+    middle_name: Optional[str] = None
+    last_name: Optional[str] = None
     department: Optional[str] = None
+    position: Optional[str] = None
+    shift: Optional[str] = None
     role: str = "basic"
     email: Optional[str] = None
     pin: Optional[str] = None
+
 
 class CSVImportResponse(BaseModel):
     total: int
     imported: int
     skipped: int
     duplicates: list
+
+
+# ---------- helpers ----------
 
 def get_db():
     db = SessionLocal()
@@ -39,42 +59,99 @@ def get_db():
     finally:
         db.close()
 
+
+def _normalize_header(h: str) -> str:
+    """
+    Normalize a CSV header for matching:
+      'Position(US)' -> 'position'
+      'Emp ID'       -> 'emp_id'
+      'First Name'   -> 'first_name'
+    """
+    if not h:
+        return ""
+    # Strip parenthetical groups like (US), (UK), (1)
+    h = re.sub(r"\([^)]*\)", "", h)
+    return h.strip().lower().replace(" ", "_")
+
+
+def _employee_to_response(e: Employee) -> EmployeeResponse:
+    return EmployeeResponse(
+        id=e.id,
+        badge=e.badge,
+        name=e.name,
+        first_name=e.first_name,
+        middle_name=getattr(e, "middle_name", None),
+        last_name=e.last_name,
+        department=e.department,
+        position=getattr(e, "position", None),
+        shift=getattr(e, "shift", None),
+        role=e.role or "basic",
+        email=e.email,
+        pin=e.pin,
+    )
+
+
+# ---------- routes ----------
+
 @router.post("/import-csv")
 async def import_csv(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    admin: Employee = Depends(get_current_employee)
+    admin: Employee = Depends(get_current_employee),
 ):
     """
     Import employees from CSV.
-    Accepted headers (case-insensitive): badge, name, first_name, last_name, department, role, email
-    Matches by badge (unique); skips dupes.
+
+    Accepted headers (case-insensitive, '(US)'-style suffixes ignored):
+      Emp ID / badge          -> badge
+      Name                    -> name (built from First+Middle+Last if blank)
+      First Name / first      -> first_name
+      Middle Name / middle    -> middle_name
+      Last Name / last        -> last_name
+      Position / Position(US) -> position
+      Shift                   -> shift
+      Department              -> department
+      Role                    -> role
+      Email                   -> email
+
+    Match key is badge (unique). When a badge already exists, empty fields
+    on the existing row get filled in from the CSV; existing non-empty
+    values are never overwritten.
     """
     contents = await file.read()
     text = contents.decode("utf-8-sig")
+
+    # Sniff tab vs comma delimiter
     sample = text[:500]
-    delim = "	" if "	" in sample else ","
+    delim = "\t" if "\t" in sample else ","
     reader = csv.DictReader(io.StringIO(text), delimiter=delim)
-    # Normalize header names
-    reader.fieldnames = [(h or "").strip().lower().replace(" ", "_") for h in (reader.fieldnames or [])]
+
+    # Normalize headers once
+    reader.fieldnames = [_normalize_header(h) for h in (reader.fieldnames or [])]
 
     imported = 0
     skipped = 0
     duplicates = []
     total = 0
+
     for idx, row in enumerate(reader, 1):
         total += 1
         try:
-            badge = (row.get("badge") or row.get("emp_id") or row.get("employee_id") or "").strip()
-            name  = (row.get("name") or "").strip()
-            first = (row.get("first_name") or row.get("first") or "").strip()
-            last  = (row.get("last_name")  or row.get("last")  or "").strip()
-            dept  = (row.get("department") or row.get("position") or "").strip() or None
-            role  = (row.get("role") or "basic").strip().lower() or "basic"
-            email = (row.get("email") or "").strip() or None
+            badge    = (row.get("badge") or row.get("emp_id") or row.get("employee_id") or "").strip()
+            name     = (row.get("name") or "").strip()
+            first    = (row.get("first_name") or row.get("first") or "").strip()
+            middle   = (row.get("middle_name") or row.get("middle") or "").strip()
+            last     = (row.get("last_name") or row.get("last") or "").strip()
+            position = (row.get("position") or "").strip() or None
+            shift    = (row.get("shift") or "").strip() or None
+            dept     = (row.get("department") or "").strip() or None
+            role     = ((row.get("role") or "basic").strip().lower()) or "basic"
+            email    = (row.get("email") or "").strip() or None
 
-            if not name and first and last:
-                name = f"{first} {last}".strip()
+            # Build Name from First+Middle+Last when Name itself is blank
+            if not name:
+                name = " ".join(p for p in (first, middle, last) if p).strip()
+
             if not name:
                 skipped += 1
                 duplicates.append({"row": idx, "error": "no name"})
@@ -86,10 +163,19 @@ async def import_csv(
 
             existing = db.query(Employee).filter(Employee.badge == badge).first()
             if existing:
-                # Update first/last/position if we now have them
-                if first and not existing.first_name: existing.first_name = first
-                if last  and not existing.last_name:  existing.last_name  = last
-                if dept and not existing.department:  existing.department = dept
+                # Fill empty fields only — never overwrite existing data
+                if first and not existing.first_name:
+                    existing.first_name = first
+                if middle and not getattr(existing, "middle_name", None):
+                    existing.middle_name = middle
+                if last and not existing.last_name:
+                    existing.last_name = last
+                if position and not getattr(existing, "position", None):
+                    existing.position = position
+                if shift and not getattr(existing, "shift", None):
+                    existing.shift = shift
+                if dept and not existing.department:
+                    existing.department = dept
                 duplicates.append({"row": idx, "name": name, "badge": badge})
                 skipped += 1
                 continue
@@ -98,7 +184,10 @@ async def import_csv(
                 badge=badge,
                 name=name,
                 first_name=first or None,
+                middle_name=middle or None,
                 last_name=last or None,
+                position=position,
+                shift=shift,
                 department=dept,
                 role=role,
                 email=email,
@@ -123,45 +212,46 @@ async def import_csv(
 def add_employee(
     emp: EmployeeCreate,
     db: Session = Depends(get_db),
-    admin: Employee = Depends(get_current_employee)
+    admin: Employee = Depends(get_current_employee),
 ):
     """Manually add a single employee."""
     existing = db.query(Employee).filter(Employee.name.ilike(emp.name)).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"An employee named '{emp.name}' already exists")
 
-    employee = Employee(name=emp.name, department=emp.department, role=emp.role, email=emp.email, pin=emp.pin)
+    employee = Employee(
+        name=emp.name,
+        first_name=emp.first_name,
+        middle_name=emp.middle_name,
+        last_name=emp.last_name,
+        department=emp.department,
+        position=emp.position,
+        shift=emp.shift,
+        role=emp.role,
+        email=emp.email,
+        pin=emp.pin,
+    )
     db.add(employee)
     db.commit()
     db.refresh(employee)
+    return _employee_to_response(employee)
 
-    return EmployeeResponse(
-        id=employee.id,
-        name=employee.name,
-        department=employee.department,
-        role=employee.role,
-        email=employee.email,
-        pin=employee.pin
-    )
 
 @router.get("/list")
 def list_employees(
     db: Session = Depends(get_db),
-    admin: Employee = Depends(get_current_employee)
+    admin: Employee = Depends(get_current_employee),
 ):
     """List all employees."""
     employees = db.query(Employee).all()
-    return [
-        EmployeeResponse(
-            id=e.id, name=e.name, department=e.department, role=e.role, email=e.email, pin=e.pin
-        ) for e in employees
-    ]
+    return [_employee_to_response(e) for e in employees]
+
 
 @router.delete("/{employee_id}")
 def delete_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    admin: Employee = Depends(get_current_employee)
+    admin: Employee = Depends(get_current_employee),
 ):
     """Delete an employee."""
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
@@ -170,31 +260,32 @@ def delete_employee(
 
     db.delete(employee)
     db.commit()
-
     return {"message": f"Employee {employee.name} deleted"}
+
 
 @router.put("/{employee_id}")
 def update_employee(
     employee_id: int,
     emp: EmployeeCreate,
     db: Session = Depends(get_db),
-    admin: Employee = Depends(get_current_employee)
+    admin: Employee = Depends(get_current_employee),
 ):
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
-    employee.name = emp.name
-    employee.department = emp.department
-    employee.role = emp.role
-    employee.email = emp.email
-    employee.pin = emp.pin if emp.pin is not None else employee.pin
+
+    employee.name        = emp.name
+    employee.first_name  = emp.first_name
+    employee.middle_name = emp.middle_name
+    employee.last_name   = emp.last_name
+    employee.department  = emp.department
+    employee.position    = emp.position
+    employee.shift       = emp.shift
+    employee.role        = emp.role
+    employee.email       = emp.email
+    if emp.pin is not None:
+        employee.pin = emp.pin
+
     db.commit()
     db.refresh(employee)
-    return EmployeeResponse(
-        id=employee.id,
-        name=employee.name,
-        department=employee.department,
-        role=employee.role,
-        email=employee.email,
-        pin=employee.pin
-    )
+    return _employee_to_response(employee)
