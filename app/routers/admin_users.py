@@ -74,6 +74,38 @@ def _normalize_header(h: str) -> str:
     return h.strip().lower().replace(" ", "_")
 
 
+def _maybe_dewrap_csv(text: str) -> str:
+    """
+    Some exports wrap every row in outer quotes with doubled internal quotes,
+    e.g.:
+        "Name,First Name,Last Name"
+        "Coltrain, Jack R.,""Jack"",Coltrain"
+    In that format csv.DictReader sees a single column whose value is the
+    entire row string, which breaks all field lookups. If we detect this
+    format (every non-empty line starts and ends with a quote), strip one
+    layer of quoting so the inner content parses normally. Leave standard
+    CSVs untouched.
+    """
+    lines = text.splitlines()
+    sample = [ln.strip() for ln in lines if ln.strip()]
+    if not sample:
+        return text
+    # Only treat as outer-quoted if the first several lines all look that way
+    head = sample[:5]
+    if not all(ln.startswith('"') and ln.endswith('"') and len(ln) >= 2 for ln in head):
+        return text
+
+    out = []
+    for ln in lines:
+        s = ln.strip()
+        if s.startswith('"') and s.endswith('"') and len(s) >= 2:
+            inner = s[1:-1].replace('""', '"')
+            out.append(inner)
+        else:
+            out.append(s)
+    return "\n".join(out)
+
+
 def _employee_to_response(e: Employee) -> EmployeeResponse:
     return EmployeeResponse(
         id=e.id,
@@ -120,6 +152,9 @@ async def import_csv(
     """
     contents = await file.read()
     text = contents.decode("utf-8-sig")
+
+    # Some exports wrap every row in outer quotes — unwrap if detected
+    text = _maybe_dewrap_csv(text)
 
     # Sniff tab vs comma delimiter
     sample = text[:500]
