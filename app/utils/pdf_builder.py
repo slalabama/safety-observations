@@ -11,6 +11,7 @@ Public surface:
 """
 import base64
 import io
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -18,6 +19,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
@@ -43,6 +45,53 @@ HEADER_HEIGHT = 0.6 * inch
 SIDE_MARGIN   = 0.6 * inch
 TOP_MARGIN    = HEADER_HEIGHT + 0.3 * inch
 BOTTOM_MARGIN = 0.6 * inch
+
+
+# ---------- branded image assets ----------
+# Both are lazy-loaded the first time a PDF is built, then cached in memory
+# for the life of the process. File-read failures are non-fatal — the PDF
+# just renders without the missing image.
+
+_STATIC_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "static",
+)
+
+# Hard-hat favicon, the same file served as the browser favicon
+_HARDHAT_PATH = os.path.join(_STATIC_DIR, "apple-touch-icon.png")
+
+# SL wordmark — bundled locally so PDFs don't depend on sl-america.com being
+# reachable or willing to serve our request
+_SL_LOGO_PATH = os.path.join(_STATIC_DIR, "sl-logo.png")
+
+_hardhat_cache: Optional[bytes] = None
+_hardhat_loaded: bool = False
+_sl_logo_cache: Optional[bytes] = None
+_sl_logo_loaded: bool = False
+
+
+def _read_file_bytes(path: str) -> Optional[bytes]:
+    try:
+        with open(path, "rb") as f:
+            return f.read()
+    except Exception:
+        return None
+
+
+def _get_hardhat_bytes() -> Optional[bytes]:
+    global _hardhat_cache, _hardhat_loaded
+    if not _hardhat_loaded:
+        _hardhat_cache = _read_file_bytes(_HARDHAT_PATH)
+        _hardhat_loaded = True
+    return _hardhat_cache
+
+
+def _get_sl_logo_bytes() -> Optional[bytes]:
+    global _sl_logo_cache, _sl_logo_loaded
+    if not _sl_logo_loaded:
+        _sl_logo_cache = _read_file_bytes(_SL_LOGO_PATH)
+        _sl_logo_loaded = True
+    return _sl_logo_cache
 
 
 # ---------- styles ----------
@@ -97,10 +146,30 @@ def _draw_header(canvas, doc, kind_label: str, submission_id: int) -> None:
     canvas.setFillColor(BRAND_NAVY)
     canvas.rect(0, PAGE_HEIGHT - HEADER_HEIGHT, PAGE_WIDTH, HEADER_HEIGHT, fill=1, stroke=0)
 
-    # "Safety 1st" wordmark, left
+    # Hard-hat icon, left side of the band
+    icon_size = 0.40 * inch
+    icon_y    = PAGE_HEIGHT - HEADER_HEIGHT + (HEADER_HEIGHT - icon_size) / 2.0
+    icon_x    = SIDE_MARGIN
+    text_x    = SIDE_MARGIN  # default if no icon
+
+    hardhat = _get_hardhat_bytes()
+    if hardhat:
+        try:
+            canvas.drawImage(
+                ImageReader(io.BytesIO(hardhat)),
+                icon_x, icon_y,
+                width=icon_size, height=icon_size,
+                mask="auto",
+                preserveAspectRatio=True,
+            )
+            text_x = icon_x + icon_size + 0.12 * inch
+        except Exception:
+            pass  # render without the icon rather than failing the whole PDF
+
+    # "Safety 1st" wordmark, left (offset past the icon)
     canvas.setFillColor(colors.white)
     canvas.setFont("Helvetica-Bold", 16)
-    canvas.drawString(SIDE_MARGIN,
+    canvas.drawString(text_x,
                       PAGE_HEIGHT - HEADER_HEIGHT + 0.18 * inch,
                       "Safety 1st")
 
@@ -235,6 +304,25 @@ def _photo_flowable(photo_data: Optional[str], max_width: float = 5.5 * inch) ->
         return None
 
 
+def _sl_logo_flowable(max_width: float = 1.6 * inch) -> Optional[Image]:
+    """Centered SL wordmark, used as the first flowable on the page."""
+    raw = _get_sl_logo_bytes()
+    if not raw:
+        return None
+    try:
+        img = Image(io.BytesIO(raw))
+        iw, ih = img.imageWidth, img.imageHeight
+        if iw <= 0 or ih <= 0:
+            return None
+        scale = max_width / float(iw)
+        img.drawWidth = max_width
+        img.drawHeight = ih * scale
+        img.hAlign = "CENTER"
+        return img
+    except Exception:
+        return None
+
+
 # ---------- public builders ----------
 
 def build_observation_pdf(obs: Dict[str, Any], employee: Dict[str, Any]) -> bytes:
@@ -248,6 +336,12 @@ def build_observation_pdf(obs: Dict[str, Any], employee: Dict[str, Any]) -> byte
     styles = _build_styles()
     doc, buf = _new_doc("Safety Observation", obs.get("id", 0))
     story: List[Any] = []
+
+    # Centered SL logo at the very top of the body
+    sl = _sl_logo_flowable()
+    if sl:
+        story.append(sl)
+        story.append(Spacer(1, 0.12 * inch))
 
     title = obs.get("incident_type") or "Safety Observation"
     story.append(Paragraph(_esc(title), styles["title"]))
@@ -295,6 +389,12 @@ def build_walkaround_pdf(sub: Dict[str, Any], form: Dict[str, Any], employee: Di
     styles = _build_styles()
     doc, buf = _new_doc("Walk-Around Inspection", sub.get("id", 0))
     story: List[Any] = []
+
+    # Centered SL logo at the very top of the body
+    sl = _sl_logo_flowable()
+    if sl:
+        story.append(sl)
+        story.append(Spacer(1, 0.12 * inch))
 
     story.append(Paragraph(_esc(form.get("name") or "Walk-Around Inspection"), styles["title"]))
     if form.get("description"):
