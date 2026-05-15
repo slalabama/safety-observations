@@ -66,12 +66,23 @@ def _normalize_header(h: str) -> str:
       'Position(US)' -> 'position'
       'Emp ID'       -> 'emp_id'
       'First Name'   -> 'first_name'
+      'E-mail'       -> 'e_mail'   (then mapped to email below)
     """
     if not h:
         return ""
     # Strip parenthetical groups like (US), (UK), (1)
     h = re.sub(r"\([^)]*\)", "", h)
-    return h.strip().lower().replace(" ", "_")
+    h = h.strip().lower()
+    # Collapse spaces, hyphens, dots, slashes into underscores
+    h = re.sub(r"[\s\-\.\/]+", "_", h)
+    # Collapse runs of underscores
+    h = re.sub(r"_+", "_", h).strip("_")
+    return h
+
+
+# Header values that mean "this isn't a real row, skip it" — used to detect
+# duplicate header rows that some exports include twice.
+_HEADER_BADGE_VALUES = {"emp_id", "emp id", "employee_id", "employee id", "badge", "id"}
 
 
 def _maybe_dewrap_csv(text: str) -> str:
@@ -181,7 +192,13 @@ async def import_csv(
             shift    = (row.get("shift") or "").strip() or None
             dept     = (row.get("department") or "").strip() or None
             role     = ((row.get("role") or "basic").strip().lower()) or "basic"
-            email    = (row.get("email") or "").strip() or None
+            email    = (row.get("email") or row.get("e_mail") or row.get("email_address") or "").strip() or None
+
+            # Skip duplicate header rows that some exports include twice
+            if badge.lower() in _HEADER_BADGE_VALUES:
+                skipped += 1
+                duplicates.append({"row": idx, "error": "duplicate header row, skipped"})
+                continue
 
             # Build Name from First+Middle+Last when Name itself is blank
             if not name:
