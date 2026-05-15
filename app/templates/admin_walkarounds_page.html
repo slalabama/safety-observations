@@ -1,4 +1,4 @@
-?<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -126,6 +126,14 @@
                             <label>Description</label>
                             <textarea id="formDesc" placeholder="Brief description..."></textarea>
                         </div>
+                        <div class="form-group">
+                            <label>Import from file (optional)</label>
+                            <input type="file" id="formFile" accept=".pdf,.xlsx,.xls" style="display:block;padding:8px;border:1px solid #d0d7de;border-radius:6px;width:100%;font-size:13px;">
+                            <div style="font-size:12px;color:#666;margin-top:6px;">
+                                PDF or Excel (.xlsx/.xls). Sections and questions will be auto-imported.
+                                Excel layout: row 1 headers (Section, Question, Type), one question per row.
+                            </div>
+                        </div>
                         <button class="btn-primary" onclick="createForm()">Create Form</button>
                     </div>
                 </div>
@@ -165,7 +173,8 @@
                                 <div class="form-item-meta">${f.section_count} sections &middot; ${f.description || 'No description'}</div>
                             </div>
                             <div style="display:flex;align-items:center;gap:8px;">
-                                <span class="badge-active">Active</span>
+                                <span class="${f.active ? 'badge-active' : 'badge-inactive'}" style="${f.active ? '' : 'background:#eee;color:#888;'}">${f.active ? 'Active' : 'Inactive'}</span>
+                                <button class="btn-icon" onclick="event.stopPropagation(); deleteForm(${f.id});" title="Delete form" style="background:transparent;border:none;cursor:pointer;color:#dc3545;font-size:16px;padding:4px 8px;">🗑️</button>
                                 <span style="color:#ccc;font-size:18px;">&#9660;</span>
                             </div>
                         </div>
@@ -227,10 +236,65 @@
         async function createForm() {
             const name = document.getElementById('formName').value.trim();
             const desc = document.getElementById('formDesc').value.trim();
+            const fileInput = document.getElementById('formFile');
+            const file = fileInput.files[0];
+
             if (!name) { showAlert('createAlert','error','Form name is required'); return; }
-            const res = await fetch('/api/walkarounds/', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({name,description:desc||null}) });
-            if (res.ok) { showAlert('createAlert','success','Form created!'); document.getElementById('formName').value=''; document.getElementById('formDesc').value=''; loadForms(); }
-            else showAlert('createAlert','error','Failed to create form');
+
+            try {
+                let res, data;
+                if (file) {
+                    // Upload + auto-parse path
+                    const fd = new FormData();
+                    fd.append('name', name);
+                    if (desc) fd.append('description', desc);
+                    fd.append('file', file);
+                    showAlert('createAlert', 'success', 'Uploading and parsing ' + file.name + '...');
+                    res = await fetch('/api/walkarounds/upload', { method:'POST', credentials:'include', body: fd });
+                    data = await res.json();
+                    if (res.ok) {
+                        showAlert('createAlert','success', data.message || 'Form created from file');
+                    } else {
+                        showAlert('createAlert','error', data.detail || 'Upload failed');
+                        return;
+                    }
+                } else {
+                    // Manual create path (unchanged)
+                    res = await fetch('/api/walkarounds/', {
+                        method:'POST',
+                        headers:{'Content-Type':'application/json'},
+                        credentials:'include',
+                        body:JSON.stringify({name, description: desc || null})
+                    });
+                    if (!res.ok) { showAlert('createAlert','error','Failed to create form'); return; }
+                    showAlert('createAlert','success','Form created!');
+                }
+                document.getElementById('formName').value = '';
+                document.getElementById('formDesc').value = '';
+                fileInput.value = '';
+                loadForms();
+            } catch(err) {
+                showAlert('createAlert','error','Connection error');
+            }
+        }
+
+        async function deleteForm(fid) {
+            // Find form name for the confirm dialog
+            const item = document.querySelector('#form-' + fid + ' .form-item-title');
+            const name = item ? item.textContent : '(this form)';
+            if (!confirm('Delete "' + name + '"?\n\nIf this form has submissions, it will be deactivated (history kept). Otherwise it will be permanently deleted.')) return;
+            try {
+                const res = await fetch('/api/walkarounds/' + fid, { method: 'DELETE', credentials: 'include' });
+                const data = await res.json();
+                if (res.ok) {
+                    showAlert('createAlert', 'success', data.message || 'Form deleted');
+                    loadForms();
+                } else {
+                    showAlert('createAlert', 'error', data.detail || 'Failed to delete form');
+                }
+            } catch(err) {
+                showAlert('createAlert', 'error', 'Connection error');
+            }
         }
 
         async function addSection(fid) {
@@ -284,4 +348,3 @@
     </script>
 </body>
 </html>
-

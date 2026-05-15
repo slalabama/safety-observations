@@ -1,7 +1,8 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Request
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+import io
 import os
 from pathlib import Path
 
@@ -34,6 +35,101 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Excel form parser
+# ---------------------------------------------------------------------------
+# Expected layout (case-insensitive headers):
+#   Row 1: Section | Question | Type
+#   Subsequent rows: one question per row. The Section column may repeat the
+#   section name on every row OR be filled only on the first row of each
+#   section (Excel-style merged-look). Both work.
+#
+# Type values understood (anything else falls back to pass_fail):
+#   pass_fail, yes_no, text, date, number  (and common variants like
+#   "Pass/Fail", "Y/N", "Numeric", etc.)
+# ---------------------------------------------------------------------------
+
+_TYPE_NORMALIZE = {
+    "pass_fail": "pass_fail", "pass/fail": "pass_fail", "pass-fail": "pass_fail",
+    "passfail": "pass_fail", "p/f": "pass_fail",
+    "yes_no": "yes_no", "yes/no": "yes_no", "yes-no": "yes_no",
+    "yesno": "yes_no", "y/n": "yes_no",
+    "text": "text", "string": "text", "freeform": "text", "comment": "text",
+    "date": "date",
+    "number": "number", "numeric": "number", "num": "number", "integer": "number",
+}
+
+
+def _norm_header(s):
+    return (str(s).strip().lower() if s is not None else "")
+
+
+def parse_excel_form(file_bytes: bytes) -> List[dict]:
+    """Parse an Excel workbook into [{name, questions:[{text, question_type}]}]."""
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(file_bytes), read_only=True, data_only=True)
+    ws = wb.active
+
+    rows = [r for r in ws.iter_rows(values_only=True)]
+    if not rows:
+        return []
+
+    # Locate columns by header name; fall back to positional if no match
+    headers = [_norm_header(c) for c in rows[0]]
+    def col(*names):
+        for n in names:
+            if n in headers:
+                return headers.index(n)
+        return -1
+
+    section_col  = col("section", "section name", "sections", "category")
+    question_col = col("question", "question text", "text", "item", "inspection item", "check")
+    type_col     = col("type", "question type", "format", "response type", "answer type")
+
+    if question_col < 0:
+        # No recognizable headers — assume positional: A=Section, B=Question, C=Type
+        section_col, question_col, type_col = 0, 1, 2
+
+    sections: List[dict] = []
+    current = None
+
+    for row in rows[1:]:
+        if not row or all(c is None or (isinstance(c, str) and not c.strip()) for c in row):
+            continue
+
+        def cell(i):
+            if i < 0 or i >= len(row) or row[i] is None:
+                return ""
+            return str(row[i]).strip()
+
+        sec_val = cell(section_col)
+        q_val   = cell(question_col)
+        t_val   = cell(type_col).lower()
+
+        # Start a new section when we see a new section name
+        if sec_val and (current is None or current["name"] != sec_val):
+            current = {"name": sec_val, "questions": []}
+            sections.append(current)
+
+        if not q_val:
+            continue
+
+        if current is None:
+            current = {"name": "General", "questions": []}
+            sections.append(current)
+
+        question_type = _TYPE_NORMALIZE.get(t_val.replace(" ", ""), None) \
+                     or _TYPE_NORMALIZE.get(t_val, "pass_fail")
+
+        current["questions"].append({
+            "text": q_val,
+            "question_type": question_type,
+        })
+
+    return sections
 
 @router.post("/upload-pdf")
 async def upload_pdf(
@@ -101,6 +197,134 @@ def create_form_from_ocr(
     db.refresh(form)
     
     return {"id": form.id, "name": form.name, "message": "Form created from OCR"}
+
+
+@router.post("/upload")
+async def upload_form(
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_employee),
+):
+    """
+    Upload a PDF or Excel form file and create the walkaround form with its
+    sections and questions in one step. PDF goes through pdf_ocr; Excel goes
+    through the local parse_excel_form helper.
+    """
+    filename = (file.filename or "").lower()
+    contents = await file.read()
+
+    if filename.endswith(".pdf"):
+        # Reuse the existing PDF extractor; it expects a file path on disk
+        upload_dir = Path("uploads/walkarounds")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = upload_dir / file.filename
+        with open(pdf_path, "wb") as fp:
+            fp.write(contents)
+        try:
+            sections = extract_text_from_pdf(str(pdf_path))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF parsing failed: {e}")
+    elif filename.endswith(".xlsx") or filename.endswith(".xls"):
+        try:
+            sections = parse_excel_form(contents)
+        except ImportError:
+            raise HTTPException(
+                status_code=500,
+                detail="openpyxl is not installed; add 'openpyxl' to requirements.txt and redeploy",
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Excel parsing failed: {e}")
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be .pdf, .xlsx, or .xls",
+        )
+
+    if not sections:
+        raise HTTPException(
+            status_code=400,
+            detail="No sections/questions were found in the file. Check the layout.",
+        )
+
+    # Create the form, sections, and questions in a single transaction
+    form = WalkaroundForm(name=name, description=description)
+    db.add(form)
+    db.flush()
+
+    total_questions = 0
+    for sec_idx, section_data in enumerate(sections):
+        section = WalkaroundSection(
+            form_id=form.id,
+            name=section_data.get("name") or f"Section {sec_idx + 1}",
+            order=sec_idx,
+        )
+        db.add(section)
+        db.flush()
+
+        for q_idx, qd in enumerate(section_data.get("questions", [])):
+            db.add(WalkaroundQuestion(
+                section_id=section.id,
+                text=qd.get("text", "").strip(),
+                question_type=qd.get("question_type", "pass_fail"),
+                order=q_idx,
+            ))
+            total_questions += 1
+
+    db.commit()
+    db.refresh(form)
+
+    return {
+        "id": form.id,
+        "name": form.name,
+        "section_count": len(sections),
+        "question_count": total_questions,
+        "message": f"Form created with {len(sections)} section(s) and {total_questions} question(s).",
+    }
+
+
+@router.delete("/{form_id}")
+def delete_form(
+    form_id: int,
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_employee),
+):
+    """
+    Delete a walkaround form.
+    - If the form has submissions, soft-delete it (active=False) so submission
+      history and PDF generation keep working.
+    - Otherwise hard-delete the form and its sections/questions.
+    """
+    from app.models import WalkaroundSubmission
+
+    form = db.query(WalkaroundForm).filter(WalkaroundForm.id == form_id).first()
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+
+    submission_count = (
+        db.query(WalkaroundSubmission)
+          .filter(WalkaroundSubmission.form_id == form_id)
+          .count()
+    )
+
+    if submission_count > 0:
+        form.active = False
+        db.commit()
+        return {
+            "deleted": False,
+            "soft_deleted": True,
+            "submission_count": submission_count,
+            "message": (
+                f"Form deactivated. {submission_count} submission(s) preserved "
+                f"so existing PDFs and history still work."
+            ),
+        }
+
+    # No submissions — hard delete is safe. Sections and questions cascade.
+    db.delete(form)
+    db.commit()
+    return {"deleted": True, "soft_deleted": False, "message": "Form deleted"}
 
 @router.post("/")
 def create_form(
