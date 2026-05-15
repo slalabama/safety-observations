@@ -1,62 +1,91 @@
+"""
+SMTP email helper.
+
+Auto-detects the right TLS mode by port:
+    465  -> implicit SMTP over TLS  (smtplib.SMTP_SSL)
+    587  -> STARTTLS handshake      (smtplib.SMTP + .starttls())
+    25   -> plain                   (smtplib.SMTP)
+
+Reads SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, EMAIL_FROM from
+the environment at call time, so changes to Railway variables take effect
+on the next request without a redeploy.
+
+Exposes two public functions for backward compatibility with whatever
+the routers were calling before:
+    send_email(to_addr, subject, body, html=None)  -> (ok: bool, detail: str)
+    send_test_email(to_addr=None)                  -> (ok: bool, detail: str)
+"""
 import os
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-
-SMTP_HOST = os.getenv("SMTP_HOST", "smtp.office365.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USER)
+import ssl
+from email.message import EmailMessage
+from typing import Optional, Tuple
 
 
-def send_email(to_addresses, subject, html_body, attachments=None):
-    """
-    Send an email via SMTP.
+def _smtp_config():
+    host = os.environ.get("SMTP_HOST", "")
+    port_raw = os.environ.get("SMTP_PORT", "587")
+    user = os.environ.get("SMTP_USER", "")
+    pwd = os.environ.get("SMTP_PASSWORD", "")
+    sender = os.environ.get("EMAIL_FROM", user or "noreply@example.com")
+    try:
+        port = int(port_raw)
+    except (TypeError, ValueError):
+        port = 587
+    return host, port, user, pwd, sender
 
-    to_addresses: list of recipient emails (or single string)
-    subject: email subject
-    html_body: HTML content
-    attachments: list of dicts [{"filename": "x.pdf", "data": bytes, "mime": "application/pdf"}]
 
-    Returns (success: bool, message: str)
-    """
-    if isinstance(to_addresses, str):
-        to_addresses = [to_addresses]
+def send_email(
+    to_addr: str,
+    subject: str,
+    body: str,
+    html: Optional[str] = None,
+) -> Tuple[bool, str]:
+    """Send a single email. Returns (ok, detail)."""
+    host, port, user, pwd, sender = _smtp_config()
 
-    if not SMTP_USER or not SMTP_PASSWORD:
-        return False, "SMTP credentials not configured"
+    if not host or not user or not pwd:
+        return False, f"SMTP not configured (host={host!r}, user_set={bool(user)}, pwd_set={bool(pwd)})"
 
-    if not to_addresses:
-        return False, "No recipients"
-
-    msg = MIMEMultipart()
-    msg["From"] = EMAIL_FROM
-    msg["To"] = ", ".join(to_addresses)
+    msg = EmailMessage()
+    msg["From"] = sender
+    msg["To"] = to_addr
     msg["Subject"] = subject
-
-    msg.attach(MIMEText(html_body, "html"))
-
-    if attachments:
-        for att in attachments:
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(att["data"])
-            encoders.encode_base64(part)
-            part.add_header(
-                "Content-Disposition",
-                f'attachment; filename="{att["filename"]}"'
-            )
-            msg.attach(part)
+    msg.set_content(body or "")
+    if html:
+        msg.add_alternative(html, subtype="html")
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(EMAIL_FROM, to_addresses, msg.as_string())
-        return True, f"Sent to {len(to_addresses)} recipient(s)"
+        if port == 465:
+            # Implicit TLS — encrypted from the first byte
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(host, port, timeout=20, context=context) as s:
+                s.login(user, pwd)
+                s.send_message(msg)
+        else:
+            # STARTTLS upgrade on plaintext socket (port 587 / 25)
+            with smtplib.SMTP(host, port, timeout=20) as s:
+                s.ehlo()
+                if port != 25:
+                    s.starttls(context=ssl.create_default_context())
+                    s.ehlo()
+                s.login(user, pwd)
+                s.send_message(msg)
+        return True, f"sent via {host}:{port} from {sender} to {to_addr}"
+    except smtplib.SMTPAuthenticationError as e:
+        return False, f"auth failed: {e}"
+    except (smtplib.SMTPConnectError, OSError) as e:
+        return False, f"connection failed to {host}:{port} — {e}"
     except Exception as e:
-        return False, f"{type(e).__name__}: {str(e)}"
+        return False, f"send failed: {type(e).__name__}: {e}"
+
+
+def send_test_email(to_addr: Optional[str] = None) -> Tuple[bool, str]:
+    """Convenience wrapper for the /test-email route."""
+    _, _, user, _, sender = _smtp_config()
+    target = to_addr or sender or user
+    return send_email(
+        to_addr=target,
+        subject="Safety 1st — SMTP test",
+        body="If you can read this, outbound mail from Railway is working.",
+    )
