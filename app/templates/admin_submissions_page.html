@@ -142,8 +142,7 @@
         let allSubmissions = [];
 
         async function checkAuth() {
-            const res = await fetch('/api/auth/me', { credentials: 'include' });
-            if (!res.ok) window.location.href = '/admin/login';
+            // auth check delegated to data fetches below
         }
 
         async function loadForms() {
