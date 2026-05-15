@@ -461,6 +461,114 @@ def update_question(form_id: int, section_id: int, question_id: int, question: Q
     return {"id": q.id, "text": q.text, "question_type": q.question_type}
 
 
+@router.get("/submissions")
+def list_submissions(
+    form_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_employee),
+):
+    """
+    List walk-around submissions, newest first. Optional ?form_id=N filter.
+    Returns a flat shape suitable for the admin table — no photo/video bytes
+    (those come from the /detail endpoint).
+    """
+    from app.models import WalkaroundSubmission, Employee
+
+    q = db.query(WalkaroundSubmission).order_by(WalkaroundSubmission.created_at.desc())
+    if form_id:
+        q = q.filter(WalkaroundSubmission.form_id == form_id)
+    submissions = q.limit(500).all()
+
+    # Batch-fetch related forms and employees to avoid N+1 queries
+    form_ids     = list({s.form_id for s in submissions})
+    employee_ids = list({s.employee_id for s in submissions})
+    forms = {f.id: f for f in db.query(WalkaroundForm).filter(WalkaroundForm.id.in_(form_ids)).all()} if form_ids else {}
+    emps  = {e.id: e for e in db.query(Employee).filter(Employee.id.in_(employee_ids)).all()} if employee_ids else {}
+
+    out = []
+    for s in submissions:
+        f = forms.get(s.form_id)
+        e = emps.get(s.employee_id)
+        out.append({
+            "id": s.id,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "form_id": s.form_id,
+            "form_name": f.name if f else "(deleted form)",
+            "employee_id": s.employee_id,
+            "employee_name": e.name if e else "(unknown)",
+            "employee_badge": e.badge if e else None,
+            "employee_department": e.department if e else None,
+            "latitude": s.latitude,
+            "longitude": s.longitude,
+            "has_photo": bool(s.photo_data),
+            "has_video": bool(s.video_data),
+        })
+    return out
+
+
+@router.get("/submissions/{submission_id}/detail")
+def get_submission_detail(
+    submission_id: int,
+    db: Session = Depends(get_db),
+    admin = Depends(get_current_employee),
+):
+    """
+    Full submission detail for the admin modal: form structure, answers
+    interleaved, photo and video bytes (base64) included.
+    """
+    from app.models import WalkaroundSubmission
+
+    s = db.query(WalkaroundSubmission).filter(WalkaroundSubmission.id == submission_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    form = db.query(WalkaroundForm).filter(WalkaroundForm.id == s.form_id).first()
+    employee = s.employee
+    responses = s.responses or {}
+
+    sections_out = []
+    if form:
+        for section in form.sections:
+            qs = []
+            for q in section.questions:
+                # Responses may key by string or int — try both
+                ans = responses.get(str(q.id))
+                if ans is None:
+                    ans = responses.get(q.id)
+                qs.append({
+                    "id": q.id,
+                    "text": q.text,
+                    "question_type": q.question_type,
+                    "answer": ans,
+                })
+            sections_out.append({
+                "id": section.id,
+                "name": section.name,
+                "questions": qs,
+            })
+
+    return {
+        "id": s.id,
+        "created_at": s.created_at.isoformat() if s.created_at else None,
+        "form": {
+            "id": form.id if form else None,
+            "name": form.name if form else "(deleted form)",
+            "description": form.description if form else None,
+            "sections": sections_out,
+        },
+        "employee": {
+            "id": employee.id if employee else None,
+            "name": employee.name if employee else "(unknown)",
+            "badge": employee.badge if employee else None,
+            "department": employee.department if employee else None,
+        },
+        "latitude": s.latitude,
+        "longitude": s.longitude,
+        "photo_data": s.photo_data,
+        "video_data": s.video_data,
+    }
+
+
 @router.post("/submit")
 async def submit_walkaround(
     request: Request,

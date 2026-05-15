@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety 1st - Submissions</title>
+    <link rel="icon" type="image/png" href="/static/apple-touch-icon.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f4f6f9; min-height: 100vh; display: flex; }
+        .sidebar { width: 240px; background: #1a2b4a; color: white; padding: 24px 0; flex-shrink: 0; min-height: 100vh; }
+        .sidebar-header { padding: 0 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header img { max-width: 140px; height: auto; display: block; margin-bottom: 8px; filter: brightness(0) invert(1); }
+        .sidebar-header h2 { font-size: 20px; font-weight: 700; }
+        .sidebar-header p { font-size: 12px; opacity: 0.7; margin-top: 4px; }
+        .sidebar-section { font-size: 11px; text-transform: uppercase; opacity: 0.5; padding: 24px 24px 8px; letter-spacing: 1px; }
+        .sidebar a { display: flex; align-items: center; gap: 10px; padding: 12px 24px; color: white; text-decoration: none; font-size: 14px; transition: background 0.2s; }
+        .sidebar a:hover { background: rgba(255,255,255,0.08); }
+        .sidebar a.active { background: rgba(255,255,255,0.12); border-left: 3px solid #14b894; padding-left: 21px; }
+        .main { flex: 1; padding: 24px 32px; max-width: 1400px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-header h1 { color: #1a2b4a; font-size: 24px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .page-header .count { color: #666; font-size: 14px; }
+        .filter-bar { display: flex; gap: 16px; align-items: center; background: white; padding: 16px 20px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-bar label { font-size: 13px; font-weight: 600; color: #333; }
+        .filter-bar select { padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 13px; outline: none; min-width: 240px; background: white; cursor: pointer; }
+        .filter-bar select:focus { border-color: #14b894; }
+        .table-card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        thead { background: #f8f9fa; border-bottom: 2px solid #e8f0fe; }
+        th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #1a2b4a; text-transform: uppercase; letter-spacing: 0.5px; }
+        tbody tr { border-bottom: 1px solid #f5f5f5; cursor: pointer; transition: background 0.15s; }
+        tbody tr:hover { background: #fafbfc; }
+        tbody tr:last-child { border-bottom: none; }
+        td { padding: 14px 16px; font-size: 13px; color: #333; vertical-align: middle; }
+        .td-date { color: #666; font-size: 12px; white-space: nowrap; }
+        .td-loc { color: #666; font-size: 11px; font-family: monospace; }
+        .td-media { font-size: 16px; }
+        .td-actions { white-space: nowrap; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .btn-icon { background: transparent; border: none; cursor: pointer; padding: 4px 8px; font-size: 14px; color: #666; border-radius: 4px; transition: background 0.15s; }
+        .btn-icon:hover { background: #e8f0fe; color: #1a2b4a; }
+        .pdf-link { display: inline-block; padding: 4px 10px; background: #1a2b4a; color: white; border-radius: 4px; font-size: 11px; font-weight: 600; text-decoration: none; }
+        .pdf-link:hover { background: #14b894; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: white; border-radius: 12px; max-width: 820px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #1a2b4a; color: white; }
+        .modal-header h2 { font-size: 18px; margin: 0; }
+        .modal-close { background: transparent; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0 8px; }
+        .modal-body { padding: 20px 24px; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #eee; display: flex; gap: 12px; justify-content: flex-end; background: #fafbfc; }
+        .btn-primary { padding: 10px 18px; background: #1a2b4a; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary:hover { background: #14b894; }
+        .btn-secondary { padding: 10px 18px; background: white; color: #333; border: 1px solid #d0d7de; border-radius: 6px; font-size: 14px; cursor: pointer; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; background: #f8f9fa; padding: 14px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; }
+        .meta-grid div strong { display: inline-block; min-width: 100px; color: #1a2b4a; }
+        .section-block { margin-bottom: 18px; }
+        .section-title { background: #1a2b4a; color: white; padding: 8px 14px; border-radius: 6px 6px 0 0; font-size: 13px; font-weight: 700; }
+        .qa-table { width: 100%; border-collapse: collapse; border: 1px solid #e8e8e8; border-top: none; border-radius: 0 0 6px 6px; overflow: hidden; }
+        .qa-table tr { border-bottom: 1px solid #f0f0f0; cursor: default; }
+        .qa-table tr:hover { background: transparent; }
+        .qa-table tr:last-child { border-bottom: none; }
+        .qa-table td { padding: 8px 14px; font-size: 12px; vertical-align: top; }
+        .qa-q { flex: 1; color: #333; }
+        .qa-a { text-align: right; font-weight: 700; white-space: nowrap; width: 110px; }
+        .answer-good { color: #28a745; }
+        .answer-bad  { color: #dc3545; }
+        .answer-na   { color: #6c757d; font-weight: 500; }
+        .answer-na-soft { color: #999; font-style: italic; font-weight: 400; }
+        .media-block { margin-top: 18px; }
+        .media-block h3 { font-size: 13px; font-weight: 700; color: #1a2b4a; margin-bottom: 8px; }
+        .media-block img, .media-block video { max-width: 100%; border-radius: 8px; border: 1px solid #e8e8e8; display: block; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <img src="https://www.sl-america.com/wp-content/uploads/logo.png" alt="SL Logo">
+            <h2>Safety 1st</h2>
+            <p>Admin Portal</p>
+        </div>
+        <div class="sidebar-section">Main</div>
+        <a href="/admin/"><span>📊</span> Dashboard</a>
+        <div class="sidebar-section">Management</div>
+        <a href="/admin/users"><span>👥</span> Employees</a>
+        <a href="/admin/observations"><span>📝</span> Observation Forms</a>
+        <a href="/admin/walkarounds"><span>🚶</span> Walk-Around Forms</a>
+        <a href="/admin/submissions" class="active"><span>📥</span> Submissions</a>
+    </div>
+
+    <div class="main">
+        <div class="page-header">
+            <h1>📥 Submissions</h1>
+            <span class="count" id="totalCount">Loading…</span>
+        </div>
+
+        <div class="filter-bar">
+            <label for="formFilter">Filter by form:</label>
+            <select id="formFilter" onchange="loadSubmissions()">
+                <option value="">All forms</option>
+            </select>
+        </div>
+
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date / Time</th>
+                        <th>Employee</th>
+                        <th>Form</th>
+                        <th>Location</th>
+                        <th>Media</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="submissionsBody">
+                    <tr><td colspan="6" class="empty-state">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detail modal -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Submission</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer">
+                <a id="downloadPdfBtn" class="btn-primary" target="_blank">⬇ Download PDF</a>
+                <button class="btn-secondary" onclick="closeModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allSubmissions = [];
+
+        async function checkAuth() {
+            const res = await fetch('/api/auth/me', { credentials: 'include' });
+            if (!res.ok) window.location.href = '/admin/login';
+        }
+
+        async function loadForms() {
+            try {
+                const res = await fetch('/api/walkarounds/', { credentials: 'include' });
+                if (!res.ok) return;
+                const forms = await res.json();
+                const select = document.getElementById('formFilter');
+                select.innerHTML = '<option value="">All forms</option>' +
+                    forms.map(f => `<option value="${f.id}">${f.name}${f.active === false ? ' (inactive)' : ''}</option>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadSubmissions() {
+            const formId = document.getElementById('formFilter').value;
+            const url = '/api/walkarounds/submissions' + (formId ? '?form_id=' + formId : '');
+            try {
+                const res = await fetch(url, { credentials: 'include' });
+                if (!res.ok) { window.location.href = '/admin/login'; return; }
+                allSubmissions = await res.json();
+                renderTable(allSubmissions);
+            } catch(e) { console.error(e); }
+        }
+
+        function renderTable(subs) {
+            const tbody = document.getElementById('submissionsBody');
+            document.getElementById('totalCount').textContent =
+                subs.length + ' submission' + (subs.length === 1 ? '' : 's');
+            if (subs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No submissions yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = subs.map(s => `
+                <tr onclick="openDetail(${s.id})">
+                    <td class="td-date">${formatDate(s.created_at)}</td>
+                    <td>
+                        <div style="font-weight:600;">${escapeHtml(s.employee_name)}</div>
+                        <div style="font-size:11px;color:#999;font-family:monospace;">${s.employee_badge || ''}</div>
+                    </td>
+                    <td>${escapeHtml(s.form_name)}</td>
+                    <td class="td-loc">${s.latitude ? s.latitude.toFixed(4) + ', ' + s.longitude.toFixed(4) : '—'}</td>
+                    <td class="td-media">${s.has_photo ? '📷' : ''} ${s.has_video ? '🎥' : ''}${(!s.has_photo && !s.has_video) ? '—' : ''}</td>
+                    <td class="td-actions">
+                        <a class="pdf-link" href="/api/walkarounds/submissions/${s.id}/pdf" target="_blank" onclick="event.stopPropagation();">PDF</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function openDetail(id) {
+            try {
+                const res = await fetch('/api/walkarounds/submissions/' + id + '/detail', { credentials: 'include' });
+                if (!res.ok) { alert('Could not load submission'); return; }
+                const s = await res.json();
+                renderModal(s);
+                document.getElementById('detailModal').classList.add('open');
+            } catch(e) { console.error(e); alert('Connection error'); }
+        }
+
+        function renderModal(s) {
+            document.getElementById('modalTitle').textContent = s.form.name;
+            document.getElementById('downloadPdfBtn').href = '/api/walkarounds/submissions/' + s.id + '/pdf';
+
+            let html = `
+                <div class="meta-grid">
+                    <div><strong>Employee:</strong> ${escapeHtml(s.employee.name)}</div>
+                    <div><strong>Badge:</strong> ${s.employee.badge || '—'}</div>
+                    <div><strong>Department:</strong> ${s.employee.department || '—'}</div>
+                    <div><strong>Submitted:</strong> ${formatDate(s.created_at)}</div>
+                    <div style="grid-column: 1 / -1;"><strong>Location:</strong> ${s.latitude ? s.latitude.toFixed(5) + ', ' + s.longitude.toFixed(5) : '—'}</div>
+                </div>
+            `;
+
+            for (const section of (s.form.sections || [])) {
+                html += `<div class="section-block">
+                    <div class="section-title">${escapeHtml(section.name)}</div>
+                    <table class="qa-table">
+                        ${section.questions.map(q => `
+                            <tr>
+                                <td class="qa-q">${escapeHtml(q.text)}</td>
+                                <td class="qa-a ${answerClass(q.answer)}">${formatAnswer(q.answer)}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>`;
+            }
+
+            if (s.photo_data) {
+                html += `<div class="media-block">
+                    <h3>Photo</h3>
+                    <img src="data:image/jpeg;base64,${s.photo_data}">
+                </div>`;
+            }
+
+            if (s.video_data) {
+                html += `<div class="media-block">
+                    <h3>Video</h3>
+                    <video controls preload="metadata">
+                        <source src="data:video/mp4;base64,${s.video_data}" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
+                </div>`;
+            }
+
+            document.getElementById('modalBody').innerHTML = html;
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('open');
+        }
+
+        // Close modal on overlay click (but not when clicking inside the modal box)
+        document.getElementById('detailModal').addEventListener('click', e => {
+            if (e.target.id === 'detailModal') closeModal();
+        });
+        // Close on Escape
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        function answerClass(a) {
+            if (a === null || a === undefined || a === '') return 'answer-na-soft';
+            const s = String(a).trim().toLowerCase();
+            if (s === 'yes' || s === 'pass' || s === 'g' || s === 'good') return 'answer-good';
+            if (s === 'no' || s === 'fail' || s === 'ng') return 'answer-bad';
+            if (s === 'n/a' || s === 'na') return 'answer-na';
+            return '';
+        }
+
+        function formatAnswer(a) {
+            if (a === null || a === undefined || a === '') return '—';
+            return escapeHtml(String(a));
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            try {
+                const d = new Date(iso);
+                return d.toLocaleString('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: 'numeric', minute: '2-digit',
+                    timeZone: 'America/Chicago',
+                });
+            } catch(e) { return iso; }
+        }
+
+        function escapeHtml(s) {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        checkAuth();
+        loadForms().then(loadSubmissions);
+    </script>
+</body>
+</html>
