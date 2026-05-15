@@ -5,7 +5,7 @@ from fastapi.responses import RedirectResponse, FileResponse
 import os
 from pathlib import Path
 
-from app.routers import admin_auth, admin_users, admin_observations, admin_walkarounds, admin_pages, setup, email_test, dashboard
+from app.routers import admin_auth, admin_users, admin_observations, admin_walkarounds, admin_pages, setup, email_test, dashboard, admin_pdf
 from app.database import engine, Base
 
 Base.metadata.create_all(bind=engine)
@@ -35,6 +35,7 @@ app.include_router(admin_pages.router)
 app.include_router(setup.router)
 app.include_router(email_test.router)
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(admin_pdf.router, prefix="/api")
 
 if os.path.exists("app/static"):
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
