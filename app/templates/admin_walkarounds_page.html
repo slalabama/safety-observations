@@ -62,6 +62,7 @@
         .pf { background: #fff3cd; color: #856404; }
         .yn { background: #d4edda; color: #155724; }
         .tx { background: #e8f0fe; color: #1a2b4a; }
+        .dt { background: #ede4ff; color: #4527a0; }
         .btn-edit { padding: 3px 10px; background: #1a2b4a; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; margin-right: 4px; }
         .btn-del { padding: 3px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; }
         .add-section-area { padding: 16px 20px; background: #f8f9fa; border-top: 2px solid #e8f0fe; }
@@ -209,14 +210,14 @@
                 return;
             }
             container.innerHTML = form.sections.map(s => {
-                const typeBadge = t => t === 'pass_fail' ? '<span class="type-badge pf">Pass/Fail</span>' : t === 'yes_no_na' ? '<span class="type-badge yn">Yes/No/NA</span>' : '<span class="type-badge tx">Text</span>';
+                const typeBadge = t => t === 'pass_fail' ? '<span class="type-badge pf">Pass/Fail</span>' : t === 'yes_no_na' ? '<span class="type-badge yn">Yes/No/NA</span>' : t === 'date' ? '<span class="type-badge dt">Date</span>' : '<span class="type-badge tx">Text</span>';
                 const qRows = s.questions.length === 0
                     ? '<div style="padding:10px 16px;color:#999;font-size:12px;">No questions</div>'
                     : s.questions.map(q =>
                         '<div class="question-row">'
                         + '<span class="question-text">' + q.text + '</span>'
                         + typeBadge(q.question_type)
-                        + '<button class="btn-edit" onclick="editQ(' + fid + ',' + s.id + ',' + q.id + ')">Edit</button>'
+                        + '<button class="btn-edit" onclick="editQ(' + fid + ',' + s.id + ',' + q.id + ", '" + (q.question_type || 'pass_fail') + "'" + ')">Edit</button>'
                         + '<button class="btn-del" onclick="delQ(' + fid + ',' + s.id + ',' + q.id + ')">Del</button>'
                         + '</div>'
                     ).join('');
@@ -226,7 +227,7 @@
                     + '<div class="add-q-area"><h5>Add Question to "' + s.name + '"</h5>'
                     + '<div class="q-row">'
                     + '<input type="text" id="qt-' + s.id + '" placeholder="Question text...">'
-                    + '<select id="qtype-' + s.id + '"><option value="pass_fail">Pass/Fail</option><option value="yes_no_na">Yes/No/NA</option><option value="text">Text</option></select>'
+                    + '<select id="qtype-' + s.id + '"><option value="pass_fail">Pass/Fail</option><option value="yes_no_na">Yes/No/NA</option><option value="text">Text</option><option value="date">Date</option></select>'
                     + '<button class="btn-sm" onclick="addQ(' + fid + ',' + s.id + ')">Add</button>'
                     + '</div></div>'
                     + '</div>';
@@ -319,12 +320,17 @@
             else alert('Delete failed');
         }
 
-        async function editQ(fid, sid, qid) {
+        async function editQ(fid, sid, qid, currentType) {
             const currentRow = event.target.closest('.question-row');
             const currentText = currentRow.querySelector('.question-text').textContent;
             const newText = prompt('Edit question:', currentText);
             if (!newText || newText === currentText) return;
-            const res = await fetch('/api/walkarounds/' + fid + '/sections/' + sid + '/questions/' + qid, { method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({text:newText,question_type:'pass_fail',order:0}) });
+            const res = await fetch('/api/walkarounds/' + fid + '/sections/' + sid + '/questions/' + qid, {
+                method: 'PUT',
+                headers: {'Content-Type':'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({text: newText, question_type: currentType || 'pass_fail', order: 0})
+            });
             if (res.ok) await loadSections(fid);
             else alert('Edit failed');
         }
