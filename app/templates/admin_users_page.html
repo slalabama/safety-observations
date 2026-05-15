@@ -161,6 +161,10 @@
                     <div class="card-body">
                         <div class="alert" id="addAlert"></div>
                         <div class="form-group">
+                            <label>Employee ID *</label>
+                            <input type="text" id="empBadge" placeholder="e.g. 3500078">
+                        </div>
+                        <div class="form-group">
                             <label>First Name *</label>
                             <input type="text" id="firstName" placeholder="First Name">
                         </div>
@@ -353,25 +357,36 @@
         }
 
         async function addEmployee() {
+            const badge     = document.getElementById('empBadge').value.trim();
             const firstName = document.getElementById('firstName').value.trim();
-            const lastName = document.getElementById('lastName').value.trim();
-            const empName = (firstName + ' ' + lastName).trim();
-            const dept = document.getElementById('dept').value.trim();
-            const email = document.getElementById('empEmail').value.trim();
-            const role = document.getElementById('role').value;
+            const lastName  = document.getElementById('lastName').value.trim();
+            const empName   = (firstName + ' ' + lastName).trim();
+            const dept      = document.getElementById('dept').value.trim();
+            const email     = document.getElementById('empEmail').value.trim();
+            const role      = document.getElementById('role').value;
 
-            if (!firstName || !lastName) { showAlert('addAlert', 'error', 'First and last name are required'); return; }
+            if (!badge)                    { showAlert('addAlert', 'error', 'Employee ID is required'); return; }
+            if (!firstName || !lastName)   { showAlert('addAlert', 'error', 'First and last name are required'); return; }
 
             try {
                 const res = await fetch('/api/users/add', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     credentials: 'include',
-                    body: JSON.stringify({name: empName, department: dept||null, email: email||null, role})
+                    body: JSON.stringify({
+                        badge,
+                        name: empName,
+                        first_name: firstName,
+                        last_name: lastName,
+                        department: dept || null,
+                        email: email || null,
+                        role,
+                    }),
                 });
                 const data = await res.json();
                 if (res.ok) {
                     showAlert('addAlert', 'success', empName + ' added successfully!');
+                    document.getElementById('empBadge').value = '';
                     document.getElementById('firstName').value = '';
                     document.getElementById('lastName').value = '';
                     document.getElementById('dept').value = '';
@@ -382,7 +397,9 @@
             } catch(err) { showAlert('addAlert', 'error', 'Connection error'); }
         }
 
-        async function deleteEmployee(id, name) {
+        async function deleteEmployee(id) {
+            const e = (window._empById || {})[id];
+            const name = e ? e.name : '(this employee)';
             if (!confirm('Delete ' + name + '? This cannot be undone.')) return;
             try {
                 const res = await fetch('/api/users/' + id, { method: 'DELETE', credentials: 'include' });

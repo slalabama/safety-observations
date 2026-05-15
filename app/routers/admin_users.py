@@ -17,6 +17,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 class EmployeeCreate(BaseModel):
     name: str
+    badge: Optional[str] = None
     first_name: Optional[str] = None
     middle_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -267,11 +268,19 @@ def add_employee(
     admin: Employee = Depends(get_current_employee),
 ):
     """Manually add a single employee."""
-    existing = db.query(Employee).filter(Employee.name.ilike(emp.name)).first()
-    if existing:
+    # Badge is the unique key on employees; required for manual add too
+    badge = (emp.badge or "").strip()
+    if not badge:
+        raise HTTPException(status_code=400, detail="Employee ID is required")
+
+    # Uniqueness checks: badge first (real unique constraint), then name (UX-only soft check)
+    if db.query(Employee).filter(Employee.badge == badge).first():
+        raise HTTPException(status_code=400, detail=f"An employee with ID '{badge}' already exists")
+    if db.query(Employee).filter(Employee.name.ilike(emp.name)).first():
         raise HTTPException(status_code=400, detail=f"An employee named '{emp.name}' already exists")
 
     employee = Employee(
+        badge=badge,
         name=emp.name,
         first_name=emp.first_name,
         middle_name=emp.middle_name,
@@ -279,13 +288,18 @@ def add_employee(
         department=emp.department,
         position=emp.position,
         shift=emp.shift,
-        role=emp.role,
+        role=emp.role or "basic",
         email=emp.email,
         pin=emp.pin,
+        status="active",
     )
-    db.add(employee)
-    db.commit()
-    db.refresh(employee)
+    try:
+        db.add(employee)
+        db.commit()
+        db.refresh(employee)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Failed to create employee: {e}")
     return _employee_to_response(employee)
 
 
