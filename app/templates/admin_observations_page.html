@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -83,13 +83,13 @@
         </div>
         <div class="nav-section">
             <div class="nav-section-title">Main</div>
-            <a href="/admin/" class="nav-item"><span class="nav-icon">ðŸ“Š</span> Dashboard</a>
+            <a href="/admin/" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
         </div>
         <div class="nav-section">
             <div class="nav-section-title">Management</div>
-            <a href="/admin/users" class="nav-item"><span class="nav-icon">ðŸ‘¥</span> Employees</a>
-            <a href="/admin/observations" class="nav-item active"><span class="nav-icon">ðŸ“‹</span> Observation Forms</a>
-            <a href="/admin/walkarounds" class="nav-item"><span class="nav-icon">ðŸš¶</span> Walk-Around Forms</a>
+            <a href="/admin/users" class="nav-item"><span class="nav-icon">👥</span> Employees</a>
+            <a href="/admin/observations" class="nav-item active"><span class="nav-icon">📋</span> Observation Forms</a>
+            <a href="/admin/walkarounds" class="nav-item"><span class="nav-icon">🚶</span> Walk-Around Forms</a>
         </div>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -99,13 +99,13 @@
                     <div class="user-role">Administrator</div>
                 </div>
             </div>
-            <button class="btn-logout" onclick="logout()">ðŸšª Sign Out</button>
+            <button class="btn-logout" onclick="logout()">🚪 Sign Out</button>
         </div>
     </div>
 
     <div class="main">
         <div class="topbar">
-            <h1>ðŸ“‹ Observation Forms</h1>
+            <h1>📋 Observation Forms</h1>
             <span style="font-size:13px;color:#666;" id="formCount">Loading...</span>
         </div>
         <div class="content">
@@ -113,7 +113,7 @@
 
                 <!-- CREATE FORM -->
                 <div class="card">
-                    <div class="card-header"><h3>âž• Create New Form</h3></div>
+                    <div class="card-header"><h3>➕ Create New Form</h3></div>
                     <div class="card-body">
                         <div class="alert" id="createAlert"></div>
                         <div class="form-group">
@@ -169,11 +169,11 @@
                     <div class="form-item-header" onclick="toggleForm(${f.id})">
                         <div>
                             <div class="form-item-title">${f.name}</div>
-                            <div class="form-item-meta">${f.question_count} questions Â· ${f.description || 'No description'}</div>
+                            <div class="form-item-meta">${f.question_count} questions · ${f.description || 'No description'}</div>
                         </div>
                         <div class="form-item-actions">
                             <span class="${f.active ? 'badge-active' : 'badge-inactive'}">${f.active ? 'Active' : 'Inactive'}</span>
-                            <span style="color:#ccc;font-size:18px;">â–¼</span>
+                            <span style="color:#ccc;font-size:18px;">▼</span>
                         </div>
                     </div>
                     <div class="form-item-body" id="body-${f.id}">
@@ -240,7 +240,7 @@
                     .sort((a, b) => a.order - b.order)
                     .map(q => `
                         <div class="question-item">
-                            <span class="drag-handle">â ¿</span>
+                            <span class="drag-handle">⠿</span>
                             <span class="question-text">${q.text}</span>
                             ${q.required ? '<span class="question-required">Required</span>' : ''}
                             <span class="question-type">${typeLabels[q.question_type] || q.question_type}</span>

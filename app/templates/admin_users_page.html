@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+?<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -87,13 +87,13 @@
         </div>
         <div class="nav-section">
             <div class="nav-section-title">Main</div>
-            <a href="/admin/" class="nav-item"><span class="nav-icon">ðŸ“Š</span> Dashboard</a>
+            <a href="/admin/" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
         </div>
         <div class="nav-section">
             <div class="nav-section-title">Management</div>
-            <a href="/admin/users" class="nav-item active"><span class="nav-icon">ðŸ‘¥</span> Employees</a>
-            <a href="/admin/observations" class="nav-item"><span class="nav-icon">ðŸ“‹</span> Observation Forms</a>
-            <a href="/admin/walkarounds" class="nav-item"><span class="nav-icon">ðŸš¶</span> Walk-Around Forms</a>
+            <a href="/admin/users" class="nav-item active"><span class="nav-icon">👥</span> Employees</a>
+            <a href="/admin/observations" class="nav-item"><span class="nav-icon">📋</span> Observation Forms</a>
+            <a href="/admin/walkarounds" class="nav-item"><span class="nav-icon">🚶</span> Walk-Around Forms</a>
         </div>
         <div class="sidebar-footer">
             <div class="user-info">
@@ -103,14 +103,14 @@
                     <div class="user-role">Administrator</div>
                 </div>
             </div>
-            <button class="btn-logout" onclick="logout()">ðŸšª Sign Out</button>
+            <button class="btn-logout" onclick="logout()">🚪 Sign Out</button>
         </div>
     </div>
 
     <!-- Edit Modal -->
     <div class="modal-overlay" id="editModal">
         <div class="modal">
-            <h3>âœï¸ Edit Employee</h3>
+            <h3>✏️ Edit Employee</h3>
             <input type="hidden" id="editId">
             <div class="form-group">
                 <label>First Name</label>
@@ -147,13 +147,13 @@
 
     <div class="main">
         <div class="topbar">
-            <h1>ðŸ‘¥ Employees</h1>
+            <h1>👥 Employees</h1>
             <span style="font-size:13px;color:#666;" id="empCount">Loading...</span>
         </div>
         <div class="content">
             <div class="top-row">
                 <div class="card">
-                    <div class="card-header"><h3>âž• Add Employee</h3></div>
+                    <div class="card-header"><h3>➕ Add Employee</h3></div>
                     <div class="card-body">
                         <div class="alert" id="addAlert"></div>
                         <div class="form-group">
@@ -183,10 +183,10 @@
                     </div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><h3>ðŸ“¥ Import from CSV</h3></div>
+                    <div class="card-header"><h3>📥 Import from CSV</h3></div>
                     <div class="card-body">
                         <div class="upload-area" onclick="document.getElementById('csvFile').click()">
-                            <div class="upload-icon">ðŸ“„</div>
+                            <div class="upload-icon">📄</div>
                             <div class="upload-text">Click to select CSV file</div>
                             <div class="upload-sub">Format: name, department, role, email</div>
                         </div>
@@ -206,7 +206,7 @@
                     <span style="font-size:13px;color:#666;" id="tableCount">0 employees</span>
                 </div>
                 <div class="search-bar">
-                    <input type="text" id="searchInput" placeholder="ðŸ” Search by name or department..." oninput="filterTable()">
+                    <input type="text" id="searchInput" placeholder="🔍 Search by name or department..." oninput="filterTable()">
                 </div>
                 <table>
                     <thead>
@@ -257,12 +257,12 @@
             tbody.innerHTML = employees.map(e => `
                 <tr>
                                         <td>${e.name}</td>
-                    <td>${e.department ? '<span class="badge-dept">' + e.department + '</span>' : '<span style="color:#999">â€”</span>'}</td>
+                    <td>${e.department ? '<span class="badge-dept">' + e.department + '</span>' : '<span style="color:#999">—</span>'}</td>
                     <td><span class="${e.role === 'admin' ? 'badge-admin' : 'badge-basic'}">${e.role === 'admin' ? 'Admin' : 'Basic'}</span></td>
-                    <td style="font-size:12px;color:#666;">${e.email || '<span style="color:#ccc;">â€”</span>'}</td>
+                    <td style="font-size:12px;color:#666;">${e.email || '<span style="color:#ccc;">—</span>'}</td>
                     <td>
-                        <button class="btn-icon" onclick="openEdit(${e.id}, '', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}', '${e.pin||''}')" title="Edit">âœï¸</button>
-                        <button class="btn-icon" onclick="deleteEmployee(${e.id}, '${e.name}')" title="Delete" style="color:#dc3545;">ðŸ—‘ï¸</button>
+                        <button class="btn-icon" onclick="openEdit(${e.id}, '', '${e.name}', '${e.department||''}', '${e.email||''}', '${e.role}', '${e.pin||''}')" title="Edit">✏️</button>
+                        <button class="btn-icon" onclick="deleteEmployee(${e.id}, '${e.name}')" title="Delete" style="color:#dc3545;">🗑️</button>
                     </td>
                 </tr>
             `).join('');
